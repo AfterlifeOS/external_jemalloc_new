@@ -973,6 +973,7 @@ malloc_slow_flag_init(void) {
 	malloc_slow = (malloc_slow_flags != 0);
 }
 
+#if 0
 /* Number of sources for initializing malloc_conf */
 #define MALLOC_CONF_NSOURCES 2
 
@@ -1734,7 +1735,7 @@ malloc_conf_init(sc_data_t *sc_data, unsigned bin_shard_sizes[SC_NBINS]) {
 	malloc_conf_init_helper(sc_data, bin_shard_sizes, false, opts_cache,
 	    NULL);
 }
-
+#endif
 #undef MALLOC_CONF_NSOURCES
 
 static bool
@@ -1790,7 +1791,7 @@ malloc_init_hard_a0_locked() {
 	if (config_prof) {
 		prof_boot0();
 	}
-	malloc_conf_init(&sc_data, bin_shard_sizes);
+	// malloc_conf_init(&sc_data, bin_shard_sizes);
 	san_init(opt_lg_san_uaf_align);
 	sz_boot(&sc_data, opt_cache_oblivious);
 	bin_info_boot(&sc_data, bin_shard_sizes);
