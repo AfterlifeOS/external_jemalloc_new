@@ -92,9 +92,9 @@ arena_stats_merge(tsdn_t *tsdn, arena_t *arena, unsigned *nthreads,
 	arena_basic_stats_merge(tsdn, arena, nthreads, dss, dirty_decay_ms,
 	    muzzy_decay_ms, nactive, ndirty, nmuzzy);
 
-	size_t base_allocated, base_resident, base_mapped, metadata_thp;
+	size_t base_allocated, base_resident, base_mapped;
 	base_stats_get(tsdn, arena->base, &base_allocated, &base_resident,
-	    &base_mapped, &metadata_thp);
+	    &base_mapped);
 	size_t pac_mapped_sz = pac_mapped(&arena->pa_shard.pac);
 	astats->mapped += base_mapped + pac_mapped_sz;
 	astats->resident += base_resident;
@@ -103,7 +103,6 @@ arena_stats_merge(tsdn_t *tsdn, arena_t *arena, unsigned *nthreads,
 
 	astats->base += base_allocated;
 	atomic_load_add_store_zu(&astats->internal, arena_internal_get(arena));
-	astats->metadata_thp += metadata_thp;
 
 	for (szind_t i = 0; i < SC_NSIZES - SC_NBINS; i++) {
 		uint64_t nmalloc = locked_read_u64(tsdn,

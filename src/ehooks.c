@@ -58,9 +58,6 @@ ehooks_default_alloc_impl(tsdn_t *tsdn, void *new_addr, size_t size,
 	    (dss_prec_t)atomic_load_u(&arena->dss_prec, ATOMIC_RELAXED);
 	void *ret = extent_alloc_core(tsdn, arena, new_addr, size, alignment,
 	    zero, commit, dss);
-	if (have_madvise_huge && ret) {
-		pages_set_thp_state(ret, size);
-	}
 	return ret;
 }
 
@@ -235,11 +232,7 @@ ehooks_default_zero_impl(void *addr, size_t size) {
 	 * don't want to purge in the middle of a hugepage (which would break it
 	 * up), so we act conservatively and use memset.
 	 */
-	bool needs_memset = true;
-	if (opt_thp != thp_mode_always) {
-		needs_memset = pages_purge_forced(addr, size);
-	}
-	if (needs_memset) {
+	if (pages_purge_forced(addr, size)) {
 		memset(addr, 0, size);
 	}
 }
