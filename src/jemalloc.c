@@ -2377,12 +2377,10 @@ je_malloc(size_t size) {
 	void* ret = cache_bin_alloc_easy(bin, &tcache_success);
 
 	if (tcache_success) {
-#if defined(ANDROID_ENABLE_TCACHE_STATS)
 		if (config_stats) {
 			*tsd_thread_allocatedp_get(tsd) += usize;
 			bin->tstats.nrequests++;
 		}
-#endif
 		if (config_prof) {
 			tcache->prof_accumbytes += usize;
 		}
