@@ -18,11 +18,12 @@
 #  define mallctlnametomib je_mallctlnametomib
 #  define malloc je_malloc
 #  define malloc_conf je_malloc_conf
+#  define malloc_conf_2_conf_harder je_malloc_conf_2_conf_harder
 #  define malloc_message je_malloc_message
 #  define malloc_stats_print je_malloc_stats_print
 #  define malloc_usable_size je_malloc_usable_size
 #  define mallocx je_mallocx
-#  define smallocx_9304c924e0e2689197c774bf7a2c17659ecf4597 je_smallocx_9304c924e0e2689197c774bf7a2c17659ecf4597
+#  define smallocx_0c69354e3dec4918756cfe3d893c3ca265e30f01 je_smallocx_0c69354e3dec4918756cfe3d893c3ca265e30f01
 #  define nallocx je_nallocx
 #  define posix_memalign je_posix_memalign
 #  define rallocx je_rallocx
@@ -51,11 +52,12 @@
 #  undef je_mallctlnametomib
 #  undef je_malloc
 #  undef je_malloc_conf
+#  undef je_malloc_conf_2_conf_harder
 #  undef je_malloc_message
 #  undef je_malloc_stats_print
 #  undef je_malloc_usable_size
 #  undef je_mallocx
-#  undef je_smallocx_9304c924e0e2689197c774bf7a2c17659ecf4597
+#  undef je_smallocx_0c69354e3dec4918756cfe3d893c3ca265e30f01
 #  undef je_nallocx
 #  undef je_posix_memalign
 #  undef je_rallocx
