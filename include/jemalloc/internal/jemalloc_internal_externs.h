@@ -13,7 +13,6 @@ extern bool malloc_slow;
 /* Run-time options. */
 extern bool opt_abort;
 extern bool opt_abort_conf;
-extern bool opt_trust_madvise;
 extern bool opt_confirm_conf;
 extern bool opt_hpa;
 extern hpa_shard_opts_t opt_hpa_opts;

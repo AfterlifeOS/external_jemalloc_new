@@ -39,7 +39,6 @@
 #define opt_junk_free JEMALLOC_N(opt_junk_free)
 #define opt_narenas JEMALLOC_N(opt_narenas)
 #define opt_narenas_ratio JEMALLOC_N(opt_narenas_ratio)
-#define opt_trust_madvise JEMALLOC_N(opt_trust_madvise)
 #define opt_utrace JEMALLOC_N(opt_utrace)
 #define opt_xmalloc JEMALLOC_N(opt_xmalloc)
 #define opt_zero JEMALLOC_N(opt_zero)
