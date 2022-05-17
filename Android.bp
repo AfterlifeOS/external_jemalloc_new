@@ -125,6 +125,7 @@ android_product_variables = {
 cc_defaults {
     name: "jemalloc5_defaults",
     host_supported: true,
+    c_std: "c11",
     native_bridge_supported: true,
     cflags: common_cflags,
 
