@@ -338,7 +338,7 @@ rtree_leaf_elm_lookup(tsdn_t *tsdn, rtree_t *rtree, rtree_ctx_t *rtree_ctx,
 		rtree_leaf_elm_t *leaf = rtree_ctx->cache[slot].leaf;
 		/* ANDROID CHANGE: Bad pointers return NULL */
 		/* assert(leaf != NULL); */
-		if (leaf == NULL) {
+		if (unlikely(leaf == NULL)) {
 			return NULL;
 		}
 		/* ANDROID END CHANGE */
@@ -354,7 +354,7 @@ rtree_leaf_elm_lookup(tsdn_t *tsdn, rtree_t *rtree, rtree_ctx_t *rtree_ctx,
 		rtree_leaf_elm_t *leaf = rtree_ctx->l2_cache[i].leaf;	\
 		/* ANDROID CHANGE: Bad pointers return NULL */		\
 		/* assert(leaf != NULL); */				\
-		if (leaf == NULL) {					\
+		if (unlikely(leaf == NULL)) {				\
 			return NULL;					\
 		}							\
 		/* ANDROID END CHANGE */				\
@@ -417,11 +417,10 @@ rtree_read(tsdn_t *tsdn, rtree_t *rtree, rtree_ctx_t *rtree_ctx, uintptr_t key,
 	    key, dependent, false);
 	/* ANDROID CHANGE: Bad pointers return NULL */
 	/* if (!dependent && elm == NULL) { */
-	if (elm == NULL) {
+	if (unlikely(elm == NULL)) {
 	/* ANDROID END CHANGE */
 		return NULL;
 	}
-	assert(elm != NULL);
 	return elm;
 }
 
@@ -432,7 +431,7 @@ rtree_extent_read(tsdn_t *tsdn, rtree_t *rtree, rtree_ctx_t *rtree_ctx,
 	    dependent);
 	/* ANDROID CHANGE: Bad pointers return NULL */
 	/* if (!dependent && elm == NULL) { */
-	if (elm == NULL) {
+	if (unlikely(elm == NULL)) {
 	/* ANDROID END CHANGE */
 		return NULL;
 	}
@@ -446,7 +445,7 @@ rtree_szind_read(tsdn_t *tsdn, rtree_t *rtree, rtree_ctx_t *rtree_ctx,
 	    dependent);
 	/* ANDROID CHANGE: Bad pointers return NULL */
 	/* if (!dependent && elm == NULL) { */
-	if (elm == NULL) {
+	if (unlikely(elm == NULL)) {
 		return SC_NSIZES;
 	}
 	return rtree_leaf_elm_szind_read(tsdn, rtree, elm, dependent);
@@ -464,7 +463,7 @@ rtree_extent_szind_read(tsdn_t *tsdn, rtree_t *rtree, rtree_ctx_t *rtree_ctx,
 	    dependent);
 	/* ANDROID CHANGE: Bad pointers return NULL */
 	/* if (!dependent && elm == NULL) { */
-	if (elm == NULL) {
+	if (unlikely(elm == NULL)) {
 	/* ANDROID END CHANGE */
 		return true;
 	}
@@ -516,7 +515,7 @@ rtree_szind_slab_read(tsdn_t *tsdn, rtree_t *rtree, rtree_ctx_t *rtree_ctx,
 	    dependent);
 	/* ANDROID CHANGE: Bad pointers return NULL */
 	/* if (!dependent && elm == NULL) { */
-	if (elm == NULL) {
+	if (unlikely(elm == NULL)) {
 	/* ANDROID END CHANGE */
 		return true;
 	}
