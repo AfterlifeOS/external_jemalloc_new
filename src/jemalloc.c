@@ -58,57 +58,11 @@ const char	*je_malloc_conf_2_conf_harder
 #endif
     ;
 
-bool	opt_abort =
-#ifdef JEMALLOC_DEBUG
-    true
-#else
-    false
-#endif
-    ;
-bool	opt_abort_conf =
-#ifdef JEMALLOC_DEBUG
-    true
-#else
-    false
-#endif
-    ;
-/* Intentionally default off, even with debug builds. */
-bool	opt_confirm_conf = false;
 const char	*opt_junk =
 #if (defined(JEMALLOC_DEBUG) && defined(JEMALLOC_FILL))
     "true"
 #else
     "false"
-#endif
-    ;
-bool	opt_junk_alloc =
-#if (defined(JEMALLOC_DEBUG) && defined(JEMALLOC_FILL))
-    true
-#else
-    false
-#endif
-    ;
-bool	opt_junk_free =
-#if (defined(JEMALLOC_DEBUG) && defined(JEMALLOC_FILL))
-    true
-#else
-    false
-#endif
-    ;
-
-bool opt_cache_oblivious =
-#ifdef JEMALLOC_CACHE_OBLIVIOUS
-    true
-#else
-    false
-#endif
-    ;
-
-zero_realloc_action_t opt_zero_realloc_action =
-#ifdef JEMALLOC_ZERO_REALLOC_DEFAULT_FREE
-    zero_realloc_action_free
-#else
-    zero_realloc_action_alloc
 #endif
     ;
 
@@ -138,20 +92,13 @@ static void default_junk_free(void *ptr, size_t usize) {
 void (*junk_alloc_callback)(void *ptr, size_t size) = &default_junk_alloc;
 void (*junk_free_callback)(void *ptr, size_t size) = &default_junk_free;
 
-bool	opt_utrace = false;
-bool	opt_xmalloc = false;
-bool	opt_experimental_infallible_new = false;
-bool	opt_zero = false;
 unsigned	opt_narenas = 0;
 fxp_t		opt_narenas_ratio = FXP_INIT_INT(4);
-
-unsigned	ncpus;
 
 /* Protects arenas initialization. */
 malloc_mutex_t arenas_lock;
 
 /* The global hpa, and whether it's on. */
-bool opt_hpa = false;
 hpa_shard_opts_t opt_hpa_opts = HPA_SHARD_OPTS_DEFAULT;
 sec_opts_t opt_hpa_sec_opts = SEC_OPTS_DEFAULT;
 
@@ -1826,8 +1773,6 @@ malloc_init_hard_a0_locked() {
 		    opt_abort_conf ? "aborting" : "disabling");
 		if (opt_abort_conf) {
 			malloc_abort_invalid_conf();
-		} else {
-			opt_hpa = false;
 		}
 	}
 	if (arena_boot(&sc_data, b0get(), opt_hpa)) {
@@ -1863,8 +1808,6 @@ malloc_init_hard_a0_locked() {
 		    opt_abort_conf ? "aborting" : "disabling");
 		if (opt_abort_conf) {
 			malloc_abort_invalid_conf();
-		} else {
-			opt_hpa = false;
 		}
 	} else if (opt_hpa) {
 		hpa_shard_opts_t hpa_shard_opts = opt_hpa_opts;
@@ -1894,13 +1837,6 @@ malloc_init_hard_a0(void) {
 static bool
 malloc_init_hard_recursible(void) {
 	malloc_init_state = malloc_init_recursible;
-
-#if defined(__BIONIC__) && defined(ANDROID_NUM_ARENAS)
-	/* Hardcode since this value won't be used. */ 
-	ncpus = 2;
-#else
-	ncpus = malloc_ncpus();
-#endif
 
 	if (opt_percpu_arena != percpu_arena_disabled) {
 		bool cpu_count_is_deterministic =

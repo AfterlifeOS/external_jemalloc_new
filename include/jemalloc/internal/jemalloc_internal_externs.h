@@ -11,34 +11,47 @@
 extern bool malloc_slow;
 
 /* Run-time options. */
-extern bool opt_abort;
-extern bool opt_abort_conf;
-extern bool opt_confirm_conf;
-extern bool opt_hpa;
+#define opt_abort 0
+#define opt_abort_conf 0
+#define opt_confirm_conf 0
+#define opt_hpa 0
 extern hpa_shard_opts_t opt_hpa_opts;
 extern sec_opts_t opt_hpa_sec_opts;
 
 extern const char *opt_junk;
-extern bool opt_junk_alloc;
-extern bool opt_junk_free;
+#define opt_junk_alloc 0
+#define opt_junk_free 0
 extern void (*junk_free_callback)(void *ptr, size_t size);
 extern void (*junk_alloc_callback)(void *ptr, size_t size);
-extern bool opt_utrace;
-extern bool opt_xmalloc;
-extern bool opt_experimental_infallible_new;
-extern bool opt_zero;
+#define opt_utrace 0
+#define opt_xmalloc 0
+#define opt_experimental_infallible_new 0
+#define opt_zero 0
 extern unsigned opt_narenas;
-extern zero_realloc_action_t opt_zero_realloc_action;
+#ifdef JEMALLOC_ZERO_REALLOC_DEFAULT_FREE
+  #define opt_zero_realloc_action zero_realloc_action_free
+#else
+  #define opt_zero_realloc_action zero_realloc_action_alloc
+#endif
 extern malloc_init_t malloc_init_state;
 extern const char *zero_realloc_mode_names[];
 extern atomic_zu_t zero_realloc_count;
-extern bool opt_cache_oblivious;
+#ifdef JEMALLOC_CACHE_OBLIVIOUS
+  #define opt_cache_oblivious true
+#else
+  #define opt_cache_oblivious false
+#endif
 
 /* Escape free-fastpath when ptr & mask == 0 (for sanitization purpose). */
 extern uintptr_t san_cache_bin_nonfast_mask;
 
 /* Number of CPUs. */
-extern unsigned ncpus;
+#if defined(__BIONIC__) && defined(ANDROID_NUM_ARENAS)
+  /* Hardcode since this value won't be used. */
+  #define ncpus 2
+#else
+  extern unsigned ncpus;
+#endif
 
 /* Number of arenas used for automatic multiplexing of threads and arenas. */
 extern unsigned narenas_auto;
