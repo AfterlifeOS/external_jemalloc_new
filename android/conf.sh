@@ -91,4 +91,4 @@ done
 
 export CPP="${CC} -E"
 
-./autogen.sh --with-jemalloc_prefix=je_ --host=${target}
+ac_cv_func_valloc=yes ./autogen.sh --with-jemalloc_prefix=je_ --host=${target}
