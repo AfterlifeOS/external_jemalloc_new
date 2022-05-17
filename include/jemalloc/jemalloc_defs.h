@@ -19,7 +19,7 @@
  * present on the system.
  */
 #define JEMALLOC_OVERRIDE_MEMALIGN 
-#define JEMALLOC_OVERRIDE_VALLOC
+#define JEMALLOC_OVERRIDE_VALLOC 
 
 /*
  * At least Linux omits the "const" in:
