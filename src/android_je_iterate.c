@@ -21,6 +21,7 @@ static bool malloc_disabled_tcache;
 
 int je_malloc_iterate(uintptr_t base, size_t size,
     void (*callback)(uintptr_t ptr, size_t size, void* arg), void* arg) {
+      /*
   size_t pagesize = getpagesize();
   tsd_t* tsd = tsd_fetch_min();
   rtree_ctx_t *rtree_ctx = tsd_rtree_ctx(tsd);
@@ -77,6 +78,7 @@ int je_malloc_iterate(uintptr_t base, size_t size,
     }
     ptr = (uintptr_t)edata_past_get(edata);
   }
+  */
   return 0;
 }
 
