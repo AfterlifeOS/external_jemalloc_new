@@ -62,6 +62,10 @@ common_cflags = [
     "-O3",
     "-funroll-loops",
 
+    // Use ELF TLS (from Scudo)
+    "-fno-emulated-tls",
+    "-ftls-model=initial-exec",
+
     // The following flags are for avoiding errors when compiling.
     "-Wno-unused-parameter",
     "-Wno-unused-function",
