@@ -209,6 +209,7 @@ lib_src_files = [
     "src/thread_event.c",
     "src/ticker.c",
     "src/tsd.c",
+    "src/util.c",
     "src/witness.c",
 ]
 
