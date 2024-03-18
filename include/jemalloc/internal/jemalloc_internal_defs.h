@@ -20,10 +20,13 @@
  */
 /* #undef JEMALLOC_OVERRIDE___LIBC_CALLOC */
 /* #undef JEMALLOC_OVERRIDE___LIBC_FREE */
+/* #undef JEMALLOC_OVERRIDE___LIBC_FREE_SIZED */
+/* #undef JEMALLOC_OVERRIDE___LIBC_FREE_ALIGNED_SIZED */
 /* #undef JEMALLOC_OVERRIDE___LIBC_MALLOC */
 /* #undef JEMALLOC_OVERRIDE___LIBC_MEMALIGN */
 /* #undef JEMALLOC_OVERRIDE___LIBC_REALLOC */
 /* #undef JEMALLOC_OVERRIDE___LIBC_VALLOC */
+/* #undef JEMALLOC_OVERRIDE___LIBC_PVALLOC */
 /* #undef JEMALLOC_OVERRIDE___POSIX_MEMALIGN */
 
 /*
@@ -110,6 +113,9 @@
 /* Defined if pthread_getname_np(3) is available. */
 #define JEMALLOC_HAVE_PTHREAD_GETNAME_NP 
 
+/* Defined if pthread_set_name_np(3) is available. */
+/* #undef JEMALLOC_HAVE_PTHREAD_SET_NAME_NP */
+
 /* Defined if pthread_get_name_np(3) is available. */
 /* #undef JEMALLOC_HAVE_PTHREAD_GET_NAME_NP */
 
@@ -182,6 +188,12 @@
 
 /* Use gcc intrinsics for profile backtracing if defined. */
 /* #undef JEMALLOC_PROF_GCC */
+
+/* JEMALLOC_PAGEID enabled page id */
+/* #undef JEMALLOC_PAGEID */
+
+/* JEMALLOC_HAVE_PRCTL checks prctl */
+#define JEMALLOC_HAVE_PRCTL 
 
 /*
  * JEMALLOC_DSS enables use of sbrk(2) to allocate extents from the data storage
@@ -290,6 +302,12 @@
  * /etc/malloc_conf.
  */
 /* #undef JEMALLOC_READLINKAT */
+
+/*
+ * If defined, use getenv() (instead of secure_getenv() or
+ * alternatives) to access MALLOC_CONF.
+ */
+/* #undef JEMALLOC_FORCE_GETENV */
 
 /*
  * Darwin (OS X) uses zones to work around Mach-O symbol override shortcomings.
@@ -421,6 +439,9 @@
 /* GNU specific sched_setaffinity support */
 #define JEMALLOC_HAVE_SCHED_SETAFFINITY 
 
+/* pthread_setaffinity_np support */
+/* #undef JEMALLOC_HAVE_PTHREAD_SETAFFINITY_NP */
+
 /*
  * If defined, all the features necessary for background threads are present.
  */
@@ -460,6 +481,17 @@
 
 /* If defined, realloc(ptr, 0) defaults to "free" instead of "alloc". */
 #define JEMALLOC_ZERO_REALLOC_DEFAULT_FREE 
+
+/* If defined, use volatile asm during benchmarks. */
+/* #undef JEMALLOC_HAVE_ASM_VOLATILE */
+
+/*
+ * If defined, support the use of rdtscp to get the time stamp counter
+ * and the processor ID.
+ */
+/* #undef JEMALLOC_HAVE_RDTSCP */
+
+#include "jemalloc/internal/jemalloc_internal_overrides.h"
 
 #endif /* JEMALLOC_INTERNAL_DEFS_H_ */
 #endif
