@@ -30,7 +30,7 @@ if [[ ! -d ${toolchain} ]]; then
 fi
 
 # The latest version of clang to use for compilation.
-latest_api=29
+latest_api=34
 
 case "$arch" in
   "arm")
@@ -64,18 +64,19 @@ fi
 
 tools=("AR" "ar"
        "AS" "as"
-       "LD" "ld"
        "RANLIB" "ranlib"
        "STRIP" "strip")
 
 for ((i = 0; i < ${#tools[@]}; i = i + 2)); do
-  binary=${toolchain}/bin/${prefix}-${tools[$((i + 1))]}
+  binary=${toolchain}/bin/llvm-${tools[$((i + 1))]}
   if [[ ! -e ${binary} ]]; then
     echo "${binary} does not exist."
     exit 1
   fi
   export ${tools[$i]}=${binary}
 done
+
+export LD=${toolchain}/bin/lld
 
 clang=("CC" "clang"
        "CXX" "clang++")
