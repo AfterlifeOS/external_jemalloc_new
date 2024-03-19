@@ -41,7 +41,7 @@ static size_t accumulate_small_allocs(arena_t* arena) {
 
       /* NOTE: This includes allocations cached on every thread. */
       malloc_mutex_lock(TSDN_NULL, &bin->lock);
-      total_bytes += bin_infos[j].reg_size * bin->stats.curregs;
+      total_bytes += bin_infos[i].reg_size * bin->stats.curregs;
       malloc_mutex_unlock(TSDN_NULL, &bin->lock);
     }
   }
