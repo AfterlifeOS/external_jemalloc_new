@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "jemalloc/internal/emap.h"
+
 static pthread_mutex_t malloc_disabled_lock = PTHREAD_MUTEX_INITIALIZER;
 static bool malloc_disabled_tcache;
 
@@ -27,29 +29,32 @@ int je_malloc_iterate(uintptr_t base, size_t size,
   uintptr_t ptr = (base + 7) & ~7;
   uintptr_t end_ptr = ptr + size;
   while (ptr < end_ptr) {
-    extent_t* extent = iealloc(tsd_tsdn(tsd), (void*)ptr);
-    if (extent == NULL) {
+    edata_t* edata = emap_edata_lookup(tsd_tsdn(tsd), &arena_emap_global, (void*)ptr);
+    if (edata == NULL) {
       // Skip to the next page, guaranteed no other pointers on this page.
       ptr += pagesize;
       continue;
     }
 
-    if (extent_szind_get_maybe_invalid(extent) >= SC_NSIZES) {
-      // Ignore this unused extent.
-      ptr = (uintptr_t)extent_past_get(extent);
+    if (edata_szind_get_maybe_invalid(edata) >= SC_NSIZES) {
+      // Ignore this unused edata.
+      ptr = (uintptr_t)edata_past_get(edata);
       continue;
     }
 
     szind_t szind;
     bool slab;
-    rtree_szind_slab_read(tsd_tsdn(tsd), &extents_rtree, rtree_ctx, ptr, true, &szind, &slab);
+    rtree_metadata_t metadata = rtree_metadata_read(tsd_tsdn(tsd), &arena_emap_global.rtree, rtree_ctx, ptr);
+    szind = metadata.szind;
+    slab = metadata.slab;
+
     if (slab) {
       // Small allocation.
-      szind_t binind = extent_szind_get(extent);
+      szind_t binind = edata_szind_get(edata);
       const bin_info_t* bin_info = &bin_infos[binind];
-      arena_slab_data_t* slab_data = extent_slab_data_get(extent);
+      slab_data_t* slab_data = edata_slab_data_get(edata);
 
-      uintptr_t first_ptr = (uintptr_t)extent_addr_get(extent);
+      uintptr_t first_ptr = (uintptr_t)edata_addr_get(edata);
       size_t bin_size = bin_info->reg_size;
       // Align the pointer to the bin size.
       ptr = (ptr + bin_size - 1) & ~(bin_size - 1);
@@ -62,15 +67,15 @@ int je_malloc_iterate(uintptr_t base, size_t size,
           callback(allocated_ptr, bin_size, arg);
         }
       }
-    } else if (extent_state_get(extent) == extent_state_active) {
+    } else if (edata_state_get(edata) == extent_state_active) {
       // Large allocation.
-      uintptr_t base_ptr = (uintptr_t)extent_addr_get(extent);
+      uintptr_t base_ptr = (uintptr_t)edata_addr_get(edata);
       if (ptr <= base_ptr) {
-        // This extent is actually allocated and within the range to check.
-        callback(base_ptr, extent_usize_get(extent), arg);
+        // This edata is actually allocated and within the range to check.
+        callback(base_ptr, edata_usize_get(edata), arg);
       }
     }
-    ptr = (uintptr_t)extent_past_get(extent);
+    ptr = (uintptr_t)edata_past_get(edata);
   }
   return 0;
 }
