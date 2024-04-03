@@ -2940,7 +2940,8 @@ arena_i_decay_ms_ctl_impl(tsd_t *tsd, const size_t *mib, size_t miblen,
 			ret = EINVAL;
 			goto label_return;
 		}
-		if (arena_is_huge(arena_ind) && *(ssize_t *)newp > 0) {
+		if (have_background_thread &&
+		    arena_is_huge(arena_ind) && *(ssize_t *)newp > 0) {
 			/*
 			 * By default the huge arena purges eagerly.  If it is
 			 * set to non-zero decay time afterwards, background
