@@ -60,6 +60,7 @@ common_cflags = [
     "-fvisibility=hidden",
     "-O3",
     "-funroll-loops",
+    "-fno-stack-protector",
 
     // Use ELF TLS (from Scudo)
     "-fno-emulated-tls",
