@@ -30,6 +30,7 @@
 #define opt_junk JEMALLOC_N(opt_junk)
 #define opt_narenas JEMALLOC_N(opt_narenas)
 #define opt_narenas_ratio JEMALLOC_N(opt_narenas_ratio)
+#define opt_zero JEMALLOC_N(opt_zero)
 #define sdallocx_default JEMALLOC_N(sdallocx_default)
 #define zero_realloc_count JEMALLOC_N(zero_realloc_count)
 #define zero_realloc_mode_names JEMALLOC_N(zero_realloc_mode_names)

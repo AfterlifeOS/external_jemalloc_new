@@ -92,6 +92,7 @@ void (*JET_MUTABLE junk_alloc_callback)(void *ptr, size_t size) = &default_junk_
 void (*JET_MUTABLE junk_free_callback)(void *ptr, size_t size) = &default_junk_free;
 void (*JET_MUTABLE invalid_conf_abort)(void) = &abort;
 
+bool	opt_zero = false;
 unsigned	opt_narenas = 0;
 static fxp_t		opt_narenas_ratio = FXP_INIT_INT(4);
 
