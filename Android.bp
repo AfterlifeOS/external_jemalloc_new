@@ -61,6 +61,7 @@ common_cflags = [
     "-O3",
     "-funroll-loops",
     "-fno-stack-protector",
+    "-Wno-error=unused-variable",
 
     // Use ELF TLS (from Scudo)
     "-fno-emulated-tls",
