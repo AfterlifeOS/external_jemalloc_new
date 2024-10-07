@@ -14,7 +14,7 @@ static uintptr_t arg_args_raw[4];
 static int call_count = 0;
 
 static void
-reset_args() {
+reset_args(void) {
 	arg_extra = NULL;
 	arg_type = 12345;
 	arg_result = NULL;
@@ -40,7 +40,7 @@ alloc_free_size(size_t sz) {
  * allocation scenarios.
  */
 static void
-be_reentrant() {
+be_reentrant(void) {
 	/* Let's make sure the tcache is non-empty if enabled. */
 	alloc_free_size(1);
 	alloc_free_size(1024);
@@ -77,7 +77,7 @@ expect_args_raw(uintptr_t *args_raw_expected, int nargs) {
 }
 
 static void
-reset() {
+reset(void) {
 	call_count = 0;
 	reset_args();
 }
@@ -312,6 +312,20 @@ TEST_BEGIN(test_hooks_alloc_simple) {
 	expect_u64_eq((uintptr_t)1, arg_args_raw[0], "Wrong argument");
 	free(ptr);
 #endif /* JEMALLOC_OVERRIDE_VALLOC */
+
+	/* pvalloc */
+#ifdef JEMALLOC_OVERRIDE_PVALLOC
+	reset();
+	ptr = pvalloc(1);
+	expect_d_eq(call_count, 1, "Hook not called");
+	expect_ptr_eq(arg_extra, (void *)123, "Wrong extra");
+	expect_d_eq(arg_type, (int)hook_alloc_pvalloc, "Wrong hook type");
+	expect_ptr_eq(ptr, arg_result, "Wrong result");
+	expect_u64_eq((uintptr_t)ptr, (uintptr_t)arg_result_raw,
+	    "Wrong raw result");
+	expect_u64_eq((uintptr_t)1, arg_args_raw[0], "Wrong argument");
+	free(ptr);
+#endif /* JEMALLOC_OVERRIDE_PVALLOC */
 
 	/* mallocx */
 	reset();

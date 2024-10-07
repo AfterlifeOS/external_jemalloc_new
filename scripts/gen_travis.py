@@ -24,7 +24,7 @@ TRAVIS_TEMPLATE = """\
 # Differences are explained here:
 # https://docs.travis-ci.com/user/languages/minimal-and-generic/
 language: minimal
-dist: focal
+dist: jammy
 
 jobs:
   include:
@@ -257,7 +257,6 @@ def generate_macos(arch):
 
     exclude = ([Option.as_malloc_conf(opt) for opt in (
             'dss:primary',
-            'percpu_arena:percpu',
             'background_thread:true')] +
         [Option.as_configure_flag('--enable-prof')] +
         [CLANG,])

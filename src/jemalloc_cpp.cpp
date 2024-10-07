@@ -1,7 +1,7 @@
 #include <mutex>
 #include <new>
+// NOLINTBEGIN(misc-use-anonymous-namespace)
 
-#define JEMALLOC_CPP_CPP_
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -57,8 +57,14 @@ JEMALLOC_NOINLINE
 static void *
 handleOOM(std::size_t size, bool nothrow) {
 	if (opt_experimental_infallible_new) {
-		safety_check_fail("<jemalloc>: Allocation failed and "
-		    "opt.experimental_infallible_new is true. Aborting.\n");
+		const char *huge_warning = (size >= ((std::size_t)1 << 30)) ?
+		    "This may be caused by heap corruption, if the large size "
+		    "is unexpected (suggest building with sanitizers for "
+		    "debugging)." : "";
+
+		safety_check_fail("<jemalloc>: Allocation of size %zu failed. "
+		    "%s opt.experimental_infallible_new is true. Aborting.\n",
+		    size, huge_warning);
 		return nullptr;
 	}
 
@@ -94,7 +100,7 @@ handleOOM(std::size_t size, bool nothrow) {
 template <bool IsNoExcept>
 JEMALLOC_NOINLINE
 static void *
-fallback_impl(std::size_t size) noexcept(IsNoExcept) {
+fallbackNewImpl(std::size_t size) noexcept(IsNoExcept) {
 	void *ptr = malloc_default(size);
 	if (likely(ptr != nullptr)) {
 		return ptr;
@@ -106,7 +112,7 @@ template <bool IsNoExcept>
 JEMALLOC_ALWAYS_INLINE
 void *
 newImpl(std::size_t size) noexcept(IsNoExcept) {
-	return imalloc_fastpath(size, &fallback_impl<IsNoExcept>);
+	return imalloc_fastpath(size, &fallbackNewImpl<IsNoExcept>);
 }
 
 void *
@@ -167,21 +173,21 @@ operator new[](std::size_t size, std::align_val_t alignment, const std::nothrow_
 
 void
 operator delete(void *ptr) noexcept {
-	je_free(ptr);
+	je_free_impl(ptr);
 }
 
 void
 operator delete[](void *ptr) noexcept {
-	je_free(ptr);
+	je_free_impl(ptr);
 }
 
 void
 operator delete(void *ptr, const std::nothrow_t &) noexcept {
-	je_free(ptr);
+	je_free_impl(ptr);
 }
 
 void operator delete[](void *ptr, const std::nothrow_t &) noexcept {
-	je_free(ptr);
+	je_free_impl(ptr);
 }
 
 #if __cpp_sized_deallocation >= 201309
@@ -218,27 +224,27 @@ alignedSizedDeleteImpl(void* ptr, std::size_t size, std::align_val_t alignment) 
 	if (unlikely(ptr == nullptr)) {
 		return;
 	}
-	je_sdallocx(ptr, size, MALLOCX_ALIGN(alignment));
+	je_sdallocx_impl(ptr, size, MALLOCX_ALIGN(alignment));
 }
 
 void
 operator delete(void* ptr, std::align_val_t) noexcept {
-	je_free(ptr);
+	je_free_impl(ptr);
 }
 
 void
 operator delete[](void* ptr, std::align_val_t) noexcept {
-	je_free(ptr);
+	je_free_impl(ptr);
 }
 
 void
 operator delete(void* ptr, std::align_val_t, const std::nothrow_t&) noexcept {
-	je_free(ptr);
+	je_free_impl(ptr);
 }
 
 void
 operator delete[](void* ptr, std::align_val_t, const std::nothrow_t&) noexcept {
-	je_free(ptr);
+	je_free_impl(ptr);
 }
 
 void
@@ -252,3 +258,4 @@ operator delete[](void* ptr, std::size_t size, std::align_val_t alignment) noexc
 }
 
 #endif  // __cpp_aligned_new
+// NOLINTEND(misc-use-anonymous-namespace)

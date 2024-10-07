@@ -85,8 +85,10 @@ prof_tctx_comp(const prof_tctx_t *a, const prof_tctx_t *b) {
 	return ret;
 }
 
+/* NOLINTBEGIN(performance-no-int-to-ptr) */
 rb_gen(static UNUSED, tctx_tree_, prof_tctx_tree_t, prof_tctx_t,
     tctx_link, prof_tctx_comp)
+/* NOLINTEND(performance-no-int-to-ptr) */
 
 static int
 prof_gctx_comp(const prof_gctx_t *a, const prof_gctx_t *b) {
@@ -100,8 +102,10 @@ prof_gctx_comp(const prof_gctx_t *a, const prof_gctx_t *b) {
 	return ret;
 }
 
+/* NOLINTBEGIN(performance-no-int-to-ptr) */
 rb_gen(static UNUSED, gctx_tree_, prof_gctx_tree_t, prof_gctx_t, dump_link,
     prof_gctx_comp)
+/* NOLINTEND(performance-no-int-to-ptr) */
 
 static int
 prof_tdata_comp(const prof_tdata_t *a, const prof_tdata_t *b) {
@@ -119,8 +123,10 @@ prof_tdata_comp(const prof_tdata_t *a, const prof_tdata_t *b) {
 	return ret;
 }
 
+/* NOLINTBEGIN(performance-no-int-to-ptr) */
 rb_gen(static UNUSED, tdata_tree_, prof_tdata_tree_t, prof_tdata_t, tdata_link,
     prof_tdata_comp)
+/* NOLINTEND(performance-no-int-to-ptr) */
 
 /******************************************************************************/
 
@@ -441,66 +447,31 @@ prof_bt_count(void) {
 	return bt_count;
 }
 
-char *
-prof_thread_name_alloc(tsd_t *tsd, const char *thread_name) {
-	char *ret;
-	size_t size;
-
-	if (thread_name == NULL) {
-		return NULL;
-	}
-
-	size = strlen(thread_name) + 1;
-	if (size == 1) {
-		return "";
-	}
-
-	ret = iallocztm(tsd_tsdn(tsd), size, sz_size2index(size), false, NULL,
-	    true, arena_get(TSDN_NULL, 0, true), true);
-	if (ret == NULL) {
-		return NULL;
-	}
-	memcpy(ret, thread_name, size);
-	return ret;
+static void
+prof_thread_name_write_tdata(prof_tdata_t *tdata, const char *thread_name) {
+	strncpy(tdata->thread_name, thread_name, PROF_THREAD_NAME_MAX_LEN);
+	tdata->thread_name[PROF_THREAD_NAME_MAX_LEN - 1] = '\0';
 }
 
 int
 prof_thread_name_set_impl(tsd_t *tsd, const char *thread_name) {
 	assert(tsd_reentrancy_level_get(tsd) == 0);
+	assert(thread_name != NULL);
 
-	prof_tdata_t *tdata;
-	unsigned i;
-	char *s;
-
-	tdata = prof_tdata_get(tsd, true);
-	if (tdata == NULL) {
-		return EAGAIN;
-	}
-
-	/* Validate input. */
-	if (thread_name == NULL) {
-		return EFAULT;
-	}
-	for (i = 0; thread_name[i] != '\0'; i++) {
+	for (unsigned i = 0; thread_name[i] != '\0'; i++) {
 		char c = thread_name[i];
 		if (!isgraph(c) && !isblank(c)) {
-			return EFAULT;
+			return EINVAL;
 		}
 	}
 
-	s = prof_thread_name_alloc(tsd, thread_name);
-	if (s == NULL) {
-		return EAGAIN;
+	prof_tdata_t *tdata = prof_tdata_get(tsd, true);
+	if (tdata == NULL) {
+		return ENOMEM;
 	}
 
-	if (tdata->thread_name != NULL) {
-		idalloctm(tsd_tsdn(tsd), tdata->thread_name, NULL, NULL, true,
-		    true);
-		tdata->thread_name = NULL;
-	}
-	if (strlen(s) > 0) {
-		tdata->thread_name = s;
-	}
+	prof_thread_name_write_tdata(tdata, thread_name);
+
 	return 0;
 }
 
@@ -538,7 +509,7 @@ prof_double_uint64_cast(double d) {
 }
 #endif
 
-void prof_unbias_map_init() {
+void prof_unbias_map_init(void) {
 	/* See the comment in prof_sample_new_event_wait */
 #ifdef JEMALLOC_PROF
 	for (szind_t i = 0; i < SC_NSIZES; i++) {
@@ -950,7 +921,7 @@ prof_tdata_dump_iter(prof_tdata_tree_t *tdatas_ptr, prof_tdata_t *tdata,
 	    tdata->thr_uid);
 	prof_dump_print_cnts(arg->prof_dump_write, arg->cbopaque,
 	    &tdata->cnt_summed);
-	if (tdata->thread_name != NULL) {
+	if (!prof_thread_name_empty(tdata)) {
 		arg->prof_dump_write(arg->cbopaque, " ");
 		arg->prof_dump_write(arg->cbopaque, tdata->thread_name);
 	}
@@ -1167,20 +1138,28 @@ prof_tdata_init_impl(tsd_t *tsd, uint64_t thr_uid, uint64_t thr_discrim,
 	cassert(config_prof);
 
 	/* Initialize an empty cache for this thread. */
-	tdata = (prof_tdata_t *)iallocztm(tsd_tsdn(tsd), sizeof(prof_tdata_t),
-	    sz_size2index(sizeof(prof_tdata_t)), false, NULL, true,
+	size_t tdata_sz = ALIGNMENT_CEILING(sizeof(prof_tdata_t), QUANTUM);
+	size_t total_sz = tdata_sz + sizeof(void *) * opt_prof_bt_max;
+	tdata = (prof_tdata_t *)iallocztm(tsd_tsdn(tsd),
+	    total_sz, sz_size2index(total_sz), false, NULL, true,
 	    arena_get(TSDN_NULL, 0, true), true);
 	if (tdata == NULL) {
 		return NULL;
 	}
 
+	tdata->vec = (void **)((byte_t *)tdata + tdata_sz);
 	tdata->lock = prof_tdata_mutex_choose(thr_uid);
 	tdata->thr_uid = thr_uid;
 	tdata->thr_discrim = thr_discrim;
-	tdata->thread_name = thread_name;
 	tdata->attached = true;
 	tdata->expired = false;
 	tdata->tctx_uid_next = 0;
+	if (thread_name == NULL) {
+		prof_thread_name_clear(tdata);
+	} else {
+		prof_thread_name_write_tdata(tdata, thread_name);
+	}
+	prof_thread_name_assert(tdata);
 
 	if (ckh_new(tsd, &tdata->bt2tctx, PROF_CKH_MINITEMS, prof_bt_hash,
 	    prof_bt_keycomp)) {
@@ -1228,13 +1207,8 @@ prof_tdata_destroy_locked(tsd_t *tsd, prof_tdata_t *tdata,
 	malloc_mutex_assert_not_owner(tsd_tsdn(tsd), tdata->lock);
 
 	tdata_tree_remove(&tdatas, tdata);
-
 	assert(prof_tdata_should_destroy_unlocked(tdata, even_if_attached));
 
-	if (tdata->thread_name != NULL) {
-		idalloctm(tsd_tsdn(tsd), tdata->thread_name, NULL, NULL, true,
-		    true);
-	}
 	ckh_delete(tsd, &tdata->bt2tctx);
 	idalloctm(tsd_tsdn(tsd), tdata, NULL, NULL, true, true);
 }

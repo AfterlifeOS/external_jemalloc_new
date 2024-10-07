@@ -8,9 +8,12 @@
 /******************************************************************************/
 /* Data. */
 
+/* NOLINTNEXTLINE(performance-no-int-to-ptr) */
+#define SBRK_INVALID ((void *)-1)
+
 const char	*opt_dss = DSS_DEFAULT;
 
-const char	*dss_prec_names[] = {
+const char	*const dss_prec_names[] = {
 	"disabled",
 	"primary",
 	"secondary",
@@ -94,7 +97,7 @@ extent_dss_max_update(void *new_addr) {
 	 * up to date.
 	 */
 	void *max_cur = extent_dss_sbrk(0);
-	if (max_cur == (void *)-1) {
+	if (max_cur == SBRK_INVALID) {
 		return NULL;
 	}
 	atomic_store_p(&dss_max, max_cur, ATOMIC_RELEASE);
@@ -147,10 +150,10 @@ extent_alloc_dss(tsdn_t *tsdn, arena_t *arena, void *new_addr, size_t size,
 			 * necessary to satisfy alignment.  This space can be
 			 * recycled for later use.
 			 */
-			void *gap_addr_page = (void *)(PAGE_CEILING(
-			    (uintptr_t)max_cur));
-			void *ret = (void *)ALIGNMENT_CEILING(
-			    (uintptr_t)gap_addr_page, alignment);
+			void *gap_addr_page = ALIGNMENT_ADDR2CEILING(max_cur,
+			    PAGE);
+			void *ret = ALIGNMENT_ADDR2CEILING(
+			    gap_addr_page, alignment);
 			size_t gap_size_page = (uintptr_t)ret -
 			    (uintptr_t)gap_addr_page;
 			if (gap_size_page != 0) {
@@ -165,7 +168,7 @@ extent_alloc_dss(tsdn_t *tsdn, arena_t *arena, void *new_addr, size_t size,
 			 * Compute the address just past the end of the desired
 			 * allocation space.
 			 */
-			void *dss_next = (void *)((uintptr_t)ret + size);
+			void *dss_next = (void *)((byte_t *)ret + size);
 			if ((uintptr_t)ret < (uintptr_t)max_cur ||
 			    (uintptr_t)dss_next < (uintptr_t)max_cur) {
 				goto label_oom; /* Wrap-around. */
@@ -220,7 +223,7 @@ extent_alloc_dss(tsdn_t *tsdn, arena_t *arena, void *new_addr, size_t size,
 			 * Failure, whether due to OOM or a race with a raw
 			 * sbrk() call from outside the allocator.
 			 */
-			if (dss_prev == (void *)-1) {
+			if (dss_prev == SBRK_INVALID) {
 				/* OOM. */
 				atomic_store_b(&dss_exhausted, true,
 				    ATOMIC_RELEASE);
@@ -270,7 +273,7 @@ extent_dss_boot(void) {
 
 	dss_base = extent_dss_sbrk(0);
 	atomic_store_b(&dss_extending, false, ATOMIC_RELAXED);
-	atomic_store_b(&dss_exhausted, dss_base == (void *)-1, ATOMIC_RELAXED);
+	atomic_store_b(&dss_exhausted, dss_base == SBRK_INVALID, ATOMIC_RELAXED);
 	atomic_store_p(&dss_max, dss_base, ATOMIC_RELAXED);
 }
 

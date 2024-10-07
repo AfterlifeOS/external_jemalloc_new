@@ -1,6 +1,7 @@
 #ifndef JEMALLOC_INTERNAL_ARENA_STRUCTS_H
 #define JEMALLOC_INTERNAL_ARENA_STRUCTS_H
 
+#include "jemalloc/internal/jemalloc_preamble.h"
 #include "jemalloc/internal/arena_stats.h"
 #include "jemalloc/internal/atomic.h"
 #include "jemalloc/internal/bin.h"
@@ -91,11 +92,19 @@ struct arena_s {
 	/* Used to determine uptime.  Read-only after initialization. */
 	nstime_t		create_time;
 
+	/* The name of the arena. */
+	char 			name[ARENA_NAME_LEN];
+
 	/*
 	 * The arena is allocated alongside its bins; really this is a
 	 * dynamically sized array determined by the binshard settings.
+	 * Enforcing cacheline-alignment to minimize the number of cachelines
+	 * touched on the hot paths.
 	 */
-	bin_t			bins[0];
+	JEMALLOC_WARN_ON_USAGE("Do not use this field directly. "
+	                       "Use `arena_get_bin` instead.")
+	JEMALLOC_ALIGNED(CACHELINE)
+	bin_t			all_bins[0];
 };
 
 #endif /* JEMALLOC_INTERNAL_ARENA_STRUCTS_H */

@@ -1,12 +1,15 @@
 #ifndef JEMALLOC_INTERNAL_PROF_EXTERNS_H
 #define JEMALLOC_INTERNAL_PROF_EXTERNS_H
 
+#include "jemalloc/internal/jemalloc_preamble.h"
+#include "jemalloc/internal/base.h"
 #include "jemalloc/internal/mutex.h"
 #include "jemalloc/internal/prof_hook.h"
 
 extern bool opt_prof;
 extern bool opt_prof_active;
 extern bool opt_prof_thread_active_init;
+extern unsigned opt_prof_bt_max;
 extern size_t opt_lg_prof_sample;    /* Mean bytes between samples. */
 extern ssize_t opt_lg_prof_interval; /* lg(prof_interval). */
 extern bool opt_prof_gdump;          /* High-water memory dumping. */
@@ -50,10 +53,16 @@ extern size_t lg_prof_sample;
 extern bool prof_booted;
 
 void prof_backtrace_hook_set(prof_backtrace_hook_t hook);
-prof_backtrace_hook_t prof_backtrace_hook_get();
+prof_backtrace_hook_t prof_backtrace_hook_get(void);
 
 void prof_dump_hook_set(prof_dump_hook_t hook);
-prof_dump_hook_t prof_dump_hook_get();
+prof_dump_hook_t prof_dump_hook_get(void);
+
+void prof_sample_hook_set(prof_sample_hook_t hook);
+prof_sample_hook_t prof_sample_hook_get(void);
+
+void prof_sample_free_hook_set(prof_sample_free_hook_t hook);
+prof_sample_free_hook_t prof_sample_free_hook_get(void);
 
 /* Functions only accessed in prof_inlines.h */
 prof_tdata_t *prof_tdata_init(tsd_t *tsd);
@@ -62,7 +71,8 @@ prof_tdata_t *prof_tdata_reinit(tsd_t *tsd, prof_tdata_t *tdata);
 void prof_alloc_rollback(tsd_t *tsd, prof_tctx_t *tctx);
 void prof_malloc_sample_object(tsd_t *tsd, const void *ptr, size_t size,
     size_t usize, prof_tctx_t *tctx);
-void prof_free_sampled_object(tsd_t *tsd, size_t usize, prof_info_t *prof_info);
+void prof_free_sampled_object(tsd_t *tsd, const void *ptr, size_t usize,
+    prof_info_t *prof_info);
 prof_tctx_t *prof_tctx_create(tsd_t *tsd);
 void prof_idump(tsdn_t *tsdn);
 bool prof_mdump(tsd_t *tsd, const char *filename);

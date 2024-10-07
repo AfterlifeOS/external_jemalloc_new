@@ -97,7 +97,7 @@ ehooks_default_destroy(extent_hooks_t *extent_hooks, void *addr, size_t size,
 
 bool
 ehooks_default_commit_impl(void *addr, size_t offset, size_t length) {
-	return pages_commit((void *)((uintptr_t)addr + (uintptr_t)offset),
+	return pages_commit((void *)((byte_t *)addr + (uintptr_t)offset),
 	    length);
 }
 
@@ -109,7 +109,7 @@ ehooks_default_commit(extent_hooks_t *extent_hooks, void *addr, size_t size,
 
 bool
 ehooks_default_decommit_impl(void *addr, size_t offset, size_t length) {
-	return pages_decommit((void *)((uintptr_t)addr + (uintptr_t)offset),
+	return pages_decommit((void *)((byte_t *)addr + (uintptr_t)offset),
 	    length);
 }
 
@@ -122,7 +122,7 @@ ehooks_default_decommit(extent_hooks_t *extent_hooks, void *addr, size_t size,
 #ifdef PAGES_CAN_PURGE_LAZY
 bool
 ehooks_default_purge_lazy_impl(void *addr, size_t offset, size_t length) {
-	return pages_purge_lazy((void *)((uintptr_t)addr + (uintptr_t)offset),
+	return pages_purge_lazy((void *)((byte_t *)addr + (uintptr_t)offset),
 	    length);
 }
 
@@ -140,7 +140,7 @@ ehooks_default_purge_lazy(extent_hooks_t *extent_hooks, void *addr, size_t size,
 #ifdef PAGES_CAN_PURGE_FORCED
 bool
 ehooks_default_purge_forced_impl(void *addr, size_t offset, size_t length) {
-	return pages_purge_forced((void *)((uintptr_t)addr +
+	return pages_purge_forced((void *)((byte_t *)addr +
 	    (uintptr_t)offset), length);
 }
 
@@ -156,7 +156,7 @@ ehooks_default_purge_forced(extent_hooks_t *extent_hooks, void *addr,
 #endif
 
 bool
-ehooks_default_split_impl() {
+ehooks_default_split_impl(void) {
 	if (!maps_coalesce) {
 		/*
 		 * Without retain, only whole regions can be purged (required by

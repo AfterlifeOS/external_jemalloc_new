@@ -1,6 +1,7 @@
 #ifndef JEMALLOC_INTERNAL_PA_H
 #define JEMALLOC_INTERNAL_PA_H
 
+#include "jemalloc/internal/jemalloc_preamble.h"
 #include "jemalloc/internal/base.h"
 #include "jemalloc/internal/decay.h"
 #include "jemalloc/internal/ecache.h"
@@ -131,7 +132,7 @@ pa_shard_ehooks_get(pa_shard_t *shard) {
 
 /* Returns true on error. */
 bool pa_central_init(pa_central_t *central, base_t *base, bool hpa,
-    hpa_hooks_t *hpa_hooks);
+    const hpa_hooks_t *hpa_hooks);
 
 /* Returns true on error. */
 bool pa_shard_init(tsdn_t *tsdn, pa_shard_t *shard, pa_central_t *central,

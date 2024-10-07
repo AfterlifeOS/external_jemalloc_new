@@ -43,6 +43,8 @@ static edata_t *extent_try_coalesce(tsdn_t *tsdn, pac_t *pac, ehooks_t *ehooks,
 static edata_t *extent_alloc_retained(tsdn_t *tsdn, pac_t *pac,
     ehooks_t *ehooks, edata_t *expand_edata, size_t size, size_t alignment,
     bool zero, bool *commit, bool guarded);
+static bool extent_decommit_wrapper(tsdn_t *tsdn, ehooks_t *ehooks,
+    edata_t *edata, size_t offset, size_t length);
 
 /******************************************************************************/
 
@@ -405,6 +407,7 @@ extent_recycle_extract(tsdn_t *tsdn, pac_t *pac, ehooks_t *ehooks,
 		edata = emap_try_acquire_edata_neighbor_expand(tsdn, pac->emap,
 		    expand_edata, EXTENT_PAI_PAC, ecache->state);
 		if (edata != NULL) {
+			/* NOLINTNEXTLINE(readability-suspicious-call-argument) */
 			extent_assert_can_expand(expand_edata, edata);
 			if (edata_size_get(edata) < size) {
 				emap_release_edata(tsdn, pac->emap, edata,
@@ -740,7 +743,7 @@ extent_grow_retained(tsdn_t *tsdn, pac_t *pac, ehooks_t *ehooks,
 		/* A successful commit should return zeroed memory. */
 		if (config_debug) {
 			void *addr = edata_addr_get(edata);
-			size_t *p = (size_t *)(uintptr_t)addr;
+			size_t *p = (size_t *)addr;
 			/* Check the first page only. */
 			for (size_t i = 0; i < PAGE / sizeof(size_t); i++) {
 				assert(p[i] == 0);
@@ -820,6 +823,7 @@ static edata_t *
 extent_try_coalesce_impl(tsdn_t *tsdn, pac_t *pac, ehooks_t *ehooks,
     ecache_t *ecache, edata_t *edata, bool *coalesced) {
 	assert(!edata_guarded_get(edata));
+	assert(coalesced != NULL);
 	/*
 	 * We avoid checking / locking inactive neighbors for large size
 	 * classes, since they are eagerly coalesced on deallocation which can
@@ -926,8 +930,9 @@ extent_record(tsdn_t *tsdn, pac_t *pac, ehooks_t *ehooks, ecache_t *ecache,
 		goto label_skip_coalesce;
 	}
 	if (!ecache->delay_coalesce) {
+		bool coalesced_unused;
 		edata = extent_try_coalesce(tsdn, pac, ehooks, ecache, edata,
-		    NULL);
+		    &coalesced_unused);
 	} else if (edata_size_get(edata) >= SC_LARGE_MINCLASS) {
 		assert(ecache == &pac->ecache_dirty);
 		/* Always coalesce large extents eagerly. */
@@ -939,6 +944,7 @@ extent_record(tsdn_t *tsdn, pac_t *pac, ehooks_t *ehooks, ecache_t *ecache,
 		} while (coalesced);
 		if (edata_size_get(edata) >=
 		    atomic_load_zu(&pac->oversize_threshold, ATOMIC_RELAXED)
+		    && !background_thread_enabled()
 		    && extent_may_force_decay(pac)) {
 			/* Shortcut to purge the oversize extent eagerly. */
 			malloc_mutex_unlock(tsdn, &ecache->mtx);
@@ -1118,7 +1124,7 @@ extent_commit_wrapper(tsdn_t *tsdn, ehooks_t *ehooks, edata_t *edata,
 	    /* growing_retained */ false);
 }
 
-bool
+static bool
 extent_decommit_wrapper(tsdn_t *tsdn, ehooks_t *ehooks, edata_t *edata,
     size_t offset, size_t length) {
 	witness_assert_depth_to_rank(tsdn_witness_tsdp_get(tsdn),
@@ -1193,7 +1199,7 @@ extent_split_impl(tsdn_t *tsdn, pac_t *pac, ehooks_t *ehooks,
 	}
 
 	edata_init(trail, edata_arena_ind_get(edata),
-	    (void *)((uintptr_t)edata_base_get(edata) + size_a), size_b,
+	    (void *)((byte_t *)edata_base_get(edata) + size_a), size_b,
 	    /* slab */ false, SC_NSIZES, edata_sn_get(edata),
 	    edata_state_get(edata), edata_zeroed_get(edata),
 	    edata_committed_get(edata), EXTENT_PAI_PAC, EXTENT_NOT_HEAD);

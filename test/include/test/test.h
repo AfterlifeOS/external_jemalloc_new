@@ -13,11 +13,7 @@
 		    __func__, __FILE__, __LINE__,			\
 		    #a, #b, a_, b_);					\
 		malloc_snprintf(message, sizeof(message), __VA_ARGS__);	\
-		if (may_abort) {					\
-			abort();					\
-		} else {						\
-			p_test_fail(prefix, message);			\
-		}							\
+		p_test_fail(may_abort, prefix, message);		\
 	}								\
 } while (0)
 
@@ -230,11 +226,7 @@
 		    #a, #b, a_ ? "true" : "false",			\
 		    b_ ? "true" : "false");				\
 		malloc_snprintf(message, sizeof(message), __VA_ARGS__);	\
-		if (may_abort) {					\
-			abort();					\
-		} else {						\
-			p_test_fail(prefix, message);			\
-		}							\
+		p_test_fail(may_abort, prefix, message);		\
 	}								\
 } while (0)
 
@@ -251,11 +243,7 @@
 		    #a, #b, a_ ? "true" : "false",			\
 		    b_ ? "true" : "false");				\
 		malloc_snprintf(message, sizeof(message), __VA_ARGS__);	\
-		if (may_abort) {					\
-			abort();					\
-		} else {						\
-			p_test_fail(prefix, message);			\
-		}							\
+		p_test_fail(may_abort, prefix, message);		\
 	}								\
 } while (0)
 
@@ -266,7 +254,7 @@
 #define expect_false(a, ...)	expect_b_eq(a, false, __VA_ARGS__)
 
 #define verify_str_eq(may_abort, a, b, ...) do {			\
-	if (strcmp((a), (b))) {						\
+	if (strcmp((a), (b)) != 0) {						\
 		char prefix[ASSERT_BUFSIZE];				\
 		char message[ASSERT_BUFSIZE];				\
 		malloc_snprintf(prefix, sizeof(prefix),			\
@@ -275,16 +263,12 @@
 		    "\"%s\" differs from \"%s\": ",			\
 		    __func__, __FILE__, __LINE__, #a, #b, a, b);	\
 		malloc_snprintf(message, sizeof(message), __VA_ARGS__);	\
-		if (may_abort) {					\
-			abort();					\
-		} else {						\
-			p_test_fail(prefix, message);			\
-		}							\
+		p_test_fail(may_abort, prefix, message);		\
 	}								\
 } while (0)
 
 #define verify_str_ne(may_abort, a, b, ...) do {			\
-	if (!strcmp((a), (b))) {					\
+	if (strcmp((a), (b)) == 0) {					\
 		char prefix[ASSERT_BUFSIZE];				\
 		char message[ASSERT_BUFSIZE];				\
 		malloc_snprintf(prefix, sizeof(prefix),			\
@@ -293,11 +277,7 @@
 		    "\"%s\" same as \"%s\": ",				\
 		    __func__, __FILE__, __LINE__, #a, #b, a, b);	\
 		malloc_snprintf(message, sizeof(message), __VA_ARGS__);	\
-		if (may_abort) {					\
-			abort();					\
-		} else {						\
-			p_test_fail(prefix, message);			\
-		}							\
+		p_test_fail(may_abort, prefix, message);		\
 	}								\
 } while (0)
 
@@ -311,11 +291,7 @@
 	    "%s:%s:%d: Unreachable code reached: ",			\
 	    __func__, __FILE__, __LINE__);				\
 	malloc_snprintf(message, sizeof(message), __VA_ARGS__);		\
-	if (may_abort) {						\
-		abort();						\
-	} else {							\
-		p_test_fail(prefix, message);				\
-	}								\
+	p_test_fail(may_abort, prefix, message);			\
 } while (0)
 
 #define expect_not_reached(...) verify_not_reached(false, __VA_ARGS__)
@@ -569,7 +545,7 @@ label_test_end:								\
 	}								\
 } while (0)
 
-bool test_is_reentrant();
+bool test_is_reentrant(void);
 
 void	test_skip(const char *format, ...) JEMALLOC_FORMAT_PRINTF(1, 2);
 void	test_fail(const char *format, ...) JEMALLOC_FORMAT_PRINTF(1, 2);
@@ -580,4 +556,4 @@ test_status_t	p_test_no_reentrancy(test_t *t, ...);
 test_status_t	p_test_no_malloc_init(test_t *t, ...);
 void	p_test_init(const char *name);
 void	p_test_fini(void);
-void	p_test_fail(const char *prefix, const char *message);
+void	p_test_fail(bool may_abort, const char *prefix, const char *message);

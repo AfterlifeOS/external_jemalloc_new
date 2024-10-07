@@ -121,10 +121,10 @@ large_ralloc_no_move_expand(tsdn_t *tsdn, edata_t *edata, size_t usize,
 			 * of CACHELINE in [0 .. PAGE).
 			 */
 			void *zbase = (void *)
-			    ((uintptr_t)edata_addr_get(edata) + old_usize);
-			void *zpast = PAGE_ADDR2BASE((void *)((uintptr_t)zbase +
+			    ((byte_t *)edata_addr_get(edata) + old_usize);
+			void *zpast = PAGE_ADDR2BASE((void *)((byte_t *)zbase +
 			    PAGE));
-			size_t nzero = (uintptr_t)zpast - (uintptr_t)zbase;
+			size_t nzero = (byte_t *)zpast - (byte_t *)zbase;
 			assert(nzero > 0);
 			memset(zbase, 0, nzero);
 		}
@@ -295,7 +295,7 @@ large_prof_info_get(tsd_t *tsd, edata_t *edata, prof_info_t *prof_info,
 	prof_tctx_t *alloc_tctx = edata_prof_tctx_get(edata);
 	prof_info->alloc_tctx = alloc_tctx;
 
-	if ((uintptr_t)alloc_tctx > (uintptr_t)1U) {
+	if (prof_tctx_is_valid(alloc_tctx)) {
 		nstime_copy(&prof_info->alloc_time,
 		    edata_prof_alloc_time_get(edata));
 		prof_info->alloc_size = edata_prof_alloc_size_get(edata);
@@ -316,7 +316,7 @@ large_prof_tctx_set(edata_t *edata, prof_tctx_t *tctx) {
 
 void
 large_prof_tctx_reset(edata_t *edata) {
-	large_prof_tctx_set(edata, (prof_tctx_t *)(uintptr_t)1U);
+	large_prof_tctx_set(edata, PROF_TCTX_SENTINEL);
 }
 
 void

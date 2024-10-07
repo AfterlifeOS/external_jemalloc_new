@@ -17,7 +17,7 @@ pa_nactive_sub(pa_shard_t *shard, size_t sub_pages) {
 
 bool
 pa_central_init(pa_central_t *central, base_t *base, bool hpa,
-    hpa_hooks_t *hpa_hooks) {
+    const hpa_hooks_t *hpa_hooks) {
 	bool err;
 	if (hpa) {
 		err = hpa_central_init(&central->hpa, base, hpa_hooks);
@@ -108,7 +108,7 @@ pa_shard_destroy(tsdn_t *tsdn, pa_shard_t *shard) {
 	pac_destroy(tsdn, &shard->pac);
 	if (shard->ever_used_hpa) {
 		sec_flush(tsdn, &shard->hpa_sec);
-		hpa_shard_disable(tsdn, &shard->hpa_shard);
+		hpa_shard_destroy(tsdn, &shard->hpa_shard);
 	}
 }
 
@@ -218,13 +218,6 @@ pa_dalloc(tsdn_t *tsdn, pa_shard_t *shard, edata_t *edata,
 	pa_nactive_sub(shard, edata_size_get(edata) >> LG_PAGE);
 	pai_t *pai = pa_get_pai(shard, edata);
 	pai_dalloc(tsdn, pai, edata, deferred_work_generated);
-}
-
-bool
-pa_shard_retain_grow_limit_get_set(tsdn_t *tsdn, pa_shard_t *shard,
-    size_t *old_limit, size_t *new_limit) {
-	return pac_retain_grow_limit_get_set(tsdn, &shard->pac, old_limit,
-	    new_limit);
 }
 
 bool

@@ -1,6 +1,7 @@
 #ifndef JEMALLOC_INTERNAL_SIZE_H
 #define JEMALLOC_INTERNAL_SIZE_H
 
+#include "jemalloc/internal/jemalloc_preamble.h"
 #include "jemalloc/internal/bit_util.h"
 #include "jemalloc/internal/pages.h"
 #include "jemalloc/internal/sc.h"
@@ -363,6 +364,21 @@ sz_sa2u(size_t size, size_t alignment) {
 		return 0;
 	}
 	return usize;
+}
+
+/*
+ * Under normal circumstances, whether or not to use a slab
+ * to satisfy an allocation depends solely on the allocation's
+ * effective size. However, this is *not* the case when an allocation
+ * is sampled for profiling, in which case you *must not* use a slab
+ * regardless of the effective size. Thus `sz_can_use_slab` is called
+ * on the common path, but there exist `*_explicit_slab` variants of
+ * several functions for handling the aforementioned case of
+ * sampled allocations.
+ */
+JEMALLOC_ALWAYS_INLINE bool
+sz_can_use_slab(size_t size) {
+	return size <= SC_SMALL_MAXCLASS;
 }
 
 size_t sz_psz_quantize_floor(size_t size);

@@ -1,6 +1,10 @@
 #ifndef JEMALLOC_INTERNAL_PH_H
 #define JEMALLOC_INTERNAL_PH_H
 
+#include "jemalloc/internal/jemalloc_preamble.h"
+#include "jemalloc/internal/assert.h"
+#include "jemalloc/internal/bit_util.h"
+
 /*
  * A Pairing Heap implementation.
  *
@@ -73,7 +77,7 @@ struct ph_s {
 
 JEMALLOC_ALWAYS_INLINE phn_link_t *
 phn_link_get(void *phn, size_t offset) {
-	return (phn_link_t *)(((uintptr_t)phn) + offset);
+	return (phn_link_t *)(((char *)phn) + offset);
 }
 
 JEMALLOC_ALWAYS_INLINE void
@@ -127,6 +131,7 @@ phn_merge_ordered(void *phn0, void *phn1, size_t offset,
 	phn0child = phn_lchild_get(phn0, offset);
 	phn_next_set(phn1, phn0child, offset);
 	if (phn0child != NULL) {
+		/* NOLINTNEXTLINE(readability-suspicious-call-argument) */
 		phn_prev_set(phn0child, phn1, offset);
 	}
 	phn_lchild_set(phn0, phn1, offset);
@@ -143,6 +148,7 @@ phn_merge(void *phn0, void *phn1, size_t offset, ph_cmp_t cmp) {
 		phn_merge_ordered(phn0, phn1, offset, cmp);
 		result = phn0;
 	} else {
+		/* NOLINTNEXTLINE(readability-suspicious-call-argument) */
 		phn_merge_ordered(phn1, phn0, offset, cmp);
 		result = phn1;
 	}
@@ -188,10 +194,12 @@ phn_merge_siblings(void *phn, size_t offset, ph_cmp_t cmp) {
 				phn_prev_set(phn1, NULL, offset);
 				phn_next_set(phn1, NULL, offset);
 				phn0 = phn_merge(phn0, phn1, offset, cmp);
+				/* NOLINTNEXTLINE(readability-suspicious-call-argument) */
 				phn_next_set(tail, phn0, offset);
 				tail = phn0;
 				phn0 = phnrest;
 			} else {
+				/* NOLINTNEXTLINE(readability-suspicious-call-argument) */
 				phn_next_set(tail, phn0, offset);
 				tail = phn0;
 				phn0 = NULL;
@@ -210,6 +218,7 @@ phn_merge_siblings(void *phn, size_t offset, ph_cmp_t cmp) {
 				if (head == NULL) {
 					break;
 				}
+				/* NOLINTNEXTLINE(readability-suspicious-call-argument) */
 				phn_next_set(tail, phn0, offset);
 				tail = phn0;
 				phn0 = head;
@@ -298,6 +307,7 @@ ph_try_aux_merge_pair(ph_t *ph, size_t offset, ph_cmp_t cmp) {
 	phn0 = phn_merge(phn0, phn1, offset, cmp);
 	phn_next_set(phn0, next_phn1, offset);
 	if (next_phn1 != NULL) {
+		/* NOLINTNEXTLINE(readability-suspicious-call-argument) */
 		phn_prev_set(next_phn1, phn0, offset);
 	}
 	phn_next_set(ph->root, phn0, offset);
@@ -318,36 +328,37 @@ ph_insert(ph_t *ph, void *phn, size_t offset, ph_cmp_t cmp) {
 	 */
 	if (ph->root == NULL) {
 		ph->root = phn;
-	} else {
-		/*
-		 * As a special case, check to see if we can replace the root.
-		 * This is practically common in some important cases, and lets
-		 * us defer some insertions (hopefully, until the point where
-		 * some of the items in the aux list have been removed, savings
-		 * us from linking them at all).
-		 */
-		if (cmp(phn, ph->root) < 0) {
-			phn_lchild_set(phn, ph->root, offset);
-			phn_prev_set(ph->root, phn, offset);
-			ph->root = phn;
-			ph->auxcount = 0;
-			return;
-		}
-		ph->auxcount++;
-		phn_next_set(phn, phn_next_get(ph->root, offset), offset);
-		if (phn_next_get(ph->root, offset) != NULL) {
-			phn_prev_set(phn_next_get(ph->root, offset), phn,
-			    offset);
-		}
-		phn_prev_set(phn, ph->root, offset);
-		phn_next_set(ph->root, phn, offset);
+		return;
 	}
-	if (ph->auxcount > 1) {
-		unsigned nmerges = ffs_zu(ph->auxcount - 1);
-		bool done = false;
-		for (unsigned i = 0; i < nmerges && !done; i++) {
-			done = ph_try_aux_merge_pair(ph, offset, cmp);
-		}
+
+	/*
+	 * As a special case, check to see if we can replace the root.
+	 * This is practically common in some important cases, and lets
+	 * us defer some insertions (hopefully, until the point where
+	 * some of the items in the aux list have been removed, savings
+	 * us from linking them at all).
+	 */
+	if (cmp(phn, ph->root) < 0) {
+		phn_lchild_set(phn, ph->root, offset);
+		phn_prev_set(ph->root, phn, offset);
+		ph->root = phn;
+		ph->auxcount = 0;
+		return;
+	}
+
+	phn_next_set(phn, phn_next_get(ph->root, offset), offset);
+	if (phn_next_get(ph->root, offset) != NULL) {
+		phn_prev_set(phn_next_get(ph->root, offset), phn,
+		    offset);
+	}
+	phn_prev_set(phn, ph->root, offset);
+	phn_next_set(ph->root, phn, offset);
+
+	ph->auxcount++;
+	unsigned nmerges = ffs_zu(ph->auxcount);
+	bool done = false;
+	for (unsigned i = 0; i < nmerges && !done; i++) {
+		done = ph_try_aux_merge_pair(ph, offset, cmp);
 	}
 }
 
@@ -368,9 +379,6 @@ ph_remove_first(ph_t *ph, size_t offset, ph_cmp_t cmp) {
 
 JEMALLOC_ALWAYS_INLINE void
 ph_remove(ph_t *ph, void *phn, size_t offset, ph_cmp_t cmp) {
-	void *replace;
-	void *parent;
-
 	if (ph->root == phn) {
 		/*
 		 * We can delete from aux list without merging it, but we need
@@ -379,9 +387,6 @@ ph_remove(ph_t *ph, void *phn, size_t offset, ph_cmp_t cmp) {
 		 */
 		if (phn_lchild_get(phn, offset) == NULL) {
 			ph->root = phn_next_get(phn, offset);
-			if (ph->root != NULL) {
-				phn_prev_set(ph->root, NULL, offset);
-			}
 			return;
 		}
 		ph_merge_aux(ph, offset, cmp);
@@ -391,50 +396,29 @@ ph_remove(ph_t *ph, void *phn, size_t offset, ph_cmp_t cmp) {
 		}
 	}
 
-	/* Get parent (if phn is leftmost child) before mutating. */
-	if ((parent = phn_prev_get(phn, offset)) != NULL) {
-		if (phn_lchild_get(parent, offset) != phn) {
-			parent = NULL;
-		}
-	}
-	/* Find a possible replacement node, and link to parent. */
-	replace = ph_merge_children(phn, offset, cmp);
-	/* Set next/prev for sibling linked list. */
+	void* prev = phn_prev_get(phn, offset);
+	void* next = phn_next_get(phn, offset);
+
+	/* If we have children, then we integrate them back in the heap. */
+	void* replace = ph_merge_children(phn, offset, cmp);
 	if (replace != NULL) {
-		if (parent != NULL) {
-			phn_prev_set(replace, parent, offset);
-			phn_lchild_set(parent, replace, offset);
-		} else {
-			phn_prev_set(replace, phn_prev_get(phn, offset),
-			    offset);
-			if (phn_prev_get(phn, offset) != NULL) {
-				phn_next_set(phn_prev_get(phn, offset), replace,
-				    offset);
-			}
+		phn_next_set(replace, next, offset);
+		if (next != NULL) {
+			phn_prev_set(next, replace, offset);
 		}
-		phn_next_set(replace, phn_next_get(phn, offset), offset);
-		if (phn_next_get(phn, offset) != NULL) {
-			phn_prev_set(phn_next_get(phn, offset), replace,
-			    offset);
-		}
+
+		next = replace;
+	}
+
+	if (next != NULL) {
+		phn_prev_set(next, prev, offset);
+	}
+
+	assert(prev != NULL);
+	if (phn_lchild_get(prev, offset) == phn) {
+		phn_lchild_set(prev, next, offset);
 	} else {
-		if (parent != NULL) {
-			void *next = phn_next_get(phn, offset);
-			phn_lchild_set(parent, next, offset);
-			if (next != NULL) {
-				phn_prev_set(next, parent, offset);
-			}
-		} else {
-			assert(phn_prev_get(phn, offset) != NULL);
-			phn_next_set(
-			    phn_prev_get(phn, offset),
-			    phn_next_get(phn, offset), offset);
-		}
-		if (phn_next_get(phn, offset) != NULL) {
-			phn_prev_set(
-			    phn_next_get(phn, offset),
-			    phn_prev_get(phn, offset), offset);
-		}
+		phn_next_set(prev, next, offset);
 	}
 }
 

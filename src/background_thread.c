@@ -46,6 +46,39 @@ pthread_create_wrapper(pthread_t *__restrict thread, const pthread_attr_t *attr,
 
 	return pthread_create_fptr(thread, attr, start_routine, arg);
 }
+
+#ifdef JEMALLOC_HAVE_DLSYM
+#include <dlfcn.h>
+#endif
+
+static bool
+pthread_create_fptr_init(void) {
+	if (pthread_create_fptr != NULL) {
+		return false;
+	}
+	/*
+	 * Try the next symbol first, because 1) when use lazy_lock we have a
+	 * wrapper for pthread_create; and 2) application may define its own
+	 * wrapper as well (and can call malloc within the wrapper).
+	 */
+#ifdef JEMALLOC_HAVE_DLSYM
+	pthread_create_fptr = dlsym(RTLD_NEXT, "pthread_create");
+#else
+	pthread_create_fptr = NULL;
+#endif
+	if (pthread_create_fptr == NULL) {
+		if (config_lazy_lock) {
+			malloc_write("<jemalloc>: Error in dlsym(RTLD_NEXT, "
+			    "\"pthread_create\")\n");
+			abort();
+		} else {
+			/* Fall back to the default symbol. */
+			pthread_create_fptr = pthread_create;
+		}
+	}
+
+	return false;
+}
 #endif /* JEMALLOC_PTHREAD_CREATE_WRAPPER */
 
 #ifndef JEMALLOC_BACKGROUND_THREAD
@@ -80,6 +113,7 @@ background_thread_info_init(tsdn_t *tsdn, background_thread_info_t *info) {
 
 static inline bool
 set_current_thread_affinity(int cpu) {
+#if defined(JEMALLOC_HAVE_SCHED_SETAFFINITY) || defined(JEMALLOC_HAVE_PTHREAD_SETAFFINITY_NP)
 #if defined(JEMALLOC_HAVE_SCHED_SETAFFINITY)
 	cpu_set_t cpuset;
 #else
@@ -109,6 +143,9 @@ set_current_thread_affinity(int cpu) {
 	cpuset_destroy(cpuset);
 #  endif
 	return ret != 0;
+#endif
+#else
+        return false;
 #endif
 }
 
@@ -303,8 +340,9 @@ background_thread_create_signals_masked(pthread_t *thread,
 }
 
 static bool
-check_background_thread_creation(tsd_t *tsd, unsigned *n_created,
-    bool *created_threads) {
+check_background_thread_creation(tsd_t *tsd,
+    const size_t const_max_background_threads,
+    unsigned *n_created, bool *created_threads) {
 	bool ret = false;
 	if (likely(*n_created == n_background_threads)) {
 		return ret;
@@ -312,7 +350,7 @@ check_background_thread_creation(tsd_t *tsd, unsigned *n_created,
 
 	tsdn_t *tsdn = tsd_tsdn(tsd);
 	malloc_mutex_unlock(tsdn, &background_thread_info[0].mtx);
-	for (unsigned i = 1; i < max_background_threads; i++) {
+	for (unsigned i = 1; i < const_max_background_threads; i++) {
 		if (created_threads[i]) {
 			continue;
 		}
@@ -330,6 +368,7 @@ check_background_thread_creation(tsd_t *tsd, unsigned *n_created,
 
 		pre_reentrancy(tsd, NULL);
 		int err = background_thread_create_signals_masked(&info->thread,
+			/* NOLINTNEXTLINE(performance-no-int-to-ptr) */
 		    NULL, background_thread_entry, (void *)(uintptr_t)i);
 		post_reentrancy(tsd);
 
@@ -354,10 +393,19 @@ check_background_thread_creation(tsd_t *tsd, unsigned *n_created,
 
 static void
 background_thread0_work(tsd_t *tsd) {
-	/* Thread0 is also responsible for launching / terminating threads. */
-	VARIABLE_ARRAY(bool, created_threads, max_background_threads);
+	/*
+	 * Thread0 is also responsible for launching / terminating threads.
+	 * We are guaranteed that `max_background_threads` will not change
+	 * underneath us. Unfortunately static analysis tools do not understand
+	 * this, so we are extracting `max_background_threads` into a local
+	 * variable solely for the sake of exposing this information to such
+	 * tools.
+	 */
+	const size_t const_max_background_threads = max_background_threads;
+	assert(const_max_background_threads > 0);
+	VARIABLE_ARRAY(bool, created_threads, const_max_background_threads);
 	unsigned i;
-	for (i = 1; i < max_background_threads; i++) {
+	for (i = 1; i < const_max_background_threads; i++) {
 		created_threads[i] = false;
 	}
 	/* Start working, and create more threads when asked. */
@@ -367,8 +415,8 @@ background_thread0_work(tsd_t *tsd) {
 		    &background_thread_info[0])) {
 			continue;
 		}
-		if (check_background_thread_creation(tsd, &n_created,
-		    (bool *)&created_threads)) {
+		if (check_background_thread_creation(tsd, const_max_background_threads,
+		    &n_created, (bool *)&created_threads)) {
 			continue;
 		}
 		background_work_sleep_once(tsd_tsdn(tsd),
@@ -380,7 +428,7 @@ background_thread0_work(tsd_t *tsd) {
 	 * the global background_thread mutex (and is waiting) for us.
 	 */
 	assert(!background_thread_enabled());
-	for (i = 1; i < max_background_threads; i++) {
+	for (i = 1; i < const_max_background_threads; i++) {
 		background_thread_info_t *info = &background_thread_info[i];
 		assert(info->state != background_thread_paused);
 		if (created_threads[i]) {
@@ -430,7 +478,7 @@ background_thread_entry(void *ind_arg) {
 	assert(thread_ind < max_background_threads);
 #ifdef JEMALLOC_HAVE_PTHREAD_SETNAME_NP
 	pthread_setname_np(pthread_self(), "jemalloc_bg_thd");
-#elif defined(__FreeBSD__) || defined(__DragonFly__)
+#elif defined(JEMALLOC_HAVE_PTHREAD_SET_NAME_NP)
 	pthread_set_name_np(pthread_self(), "jemalloc_bg_thd");
 #endif
 	if (opt_percpu_arena != percpu_arena_disabled) {
@@ -493,6 +541,7 @@ background_thread_create_locked(tsd_t *tsd, unsigned arena_ind) {
 	 * background threads with the underlying pthread_create.
 	 */
 	int err = background_thread_create_signals_masked(&info->thread, NULL,
+		/* NOLINTNEXTLINE(performance-no-int-to-ptr) */
 	    background_thread_entry, (void *)thread_ind);
 	post_reentrancy(tsd);
 
@@ -705,39 +754,6 @@ background_thread_stats_read(tsdn_t *tsdn, background_thread_stats_t *stats) {
 #undef BACKGROUND_THREAD_NPAGES_THRESHOLD
 #undef BILLION
 #undef BACKGROUND_THREAD_MIN_INTERVAL_NS
-
-#ifdef JEMALLOC_HAVE_DLSYM
-#include <dlfcn.h>
-#endif
-
-static bool
-pthread_create_fptr_init(void) {
-	if (pthread_create_fptr != NULL) {
-		return false;
-	}
-	/*
-	 * Try the next symbol first, because 1) when use lazy_lock we have a
-	 * wrapper for pthread_create; and 2) application may define its own
-	 * wrapper as well (and can call malloc within the wrapper).
-	 */
-#ifdef JEMALLOC_HAVE_DLSYM
-	pthread_create_fptr = dlsym(RTLD_NEXT, "pthread_create");
-#else
-	pthread_create_fptr = NULL;
-#endif
-	if (pthread_create_fptr == NULL) {
-		if (config_lazy_lock) {
-			malloc_write("<jemalloc>: Error in dlsym(RTLD_NEXT, "
-			    "\"pthread_create\")\n");
-			abort();
-		} else {
-			/* Fall back to the default symbol. */
-			pthread_create_fptr = pthread_create;
-		}
-	}
-
-	return false;
-}
 
 /*
  * When lazy lock is enabled, we need to make sure setting isthreaded before

@@ -1,6 +1,10 @@
 #ifndef JEMALLOC_INTERNAL_EXTENT_DSS_H
 #define JEMALLOC_INTERNAL_EXTENT_DSS_H
 
+#include "jemalloc/internal/jemalloc_preamble.h"
+#include "jemalloc/internal/arena_types.h"
+#include "jemalloc/internal/tsd_types.h"
+
 typedef enum {
 	dss_prec_disabled  = 0,
 	dss_prec_primary   = 1,
@@ -11,7 +15,7 @@ typedef enum {
 #define DSS_PREC_DEFAULT dss_prec_secondary
 #define DSS_DEFAULT "secondary"
 
-extern const char *dss_prec_names[];
+extern const char *const dss_prec_names[];
 
 extern const char *opt_dss;
 

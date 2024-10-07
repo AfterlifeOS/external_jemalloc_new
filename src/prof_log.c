@@ -25,7 +25,7 @@ enum prof_logging_state_e {
  * - started: log_start called, log_stop not called yet. Allocations are logged.
  * - dumping: log_stop called but not finished; samples are not logged anymore.
  */
-prof_logging_state_t prof_logging_state = prof_logging_state_stopped;
+static prof_logging_state_t prof_logging_state = prof_logging_state_stopped;
 
 /* Used in unit tests. */
 static bool prof_log_dummy = false;
@@ -243,8 +243,7 @@ prof_try_log(tsd_t *tsd, size_t usize, prof_info_t *prof_info) {
 	    iallocztm(tsd_tsdn(tsd), sz, sz_size2index(sz), false, NULL, true,
 	    arena_get(TSDN_NULL, 0, true), true);
 
-	const char *prod_thr_name = (tctx->tdata->thread_name == NULL)?
-				        "" : tctx->tdata->thread_name;
+	const char *prod_thr_name = tctx->tdata->thread_name;
 	const char *cons_thr_name = prof_thread_name_get(tsd);
 
 	prof_bt_t bt;

@@ -316,7 +316,8 @@ x2s(uintmax_t x, bool alt_form, bool uppercase, char *s, size_t *slen_p) {
 	if (alt_form) {
 		s -= 2;
 		(*slen_p) += 2;
-		memcpy(s, uppercase ? "0X" : "0x", 2);
+		s[0] = '0';
+		s[1] = uppercase ? 'X' : 'x';
 	}
 	return s;
 }
@@ -423,7 +424,6 @@ malloc_vsnprintf(char *str, size_t size, const char *format, va_list ap) {
 			unsigned char len = '?';
 			char *s;
 			size_t slen;
-			bool first_width_digit = true;
 			bool pad_zero = false;
 
 			f++;
@@ -462,9 +462,7 @@ malloc_vsnprintf(char *str, size_t size, const char *format, va_list ap) {
 				}
 				break;
 			case '0':
-				if (first_width_digit) {
-					pad_zero = true;
-				}
+				pad_zero = true;
 				JEMALLOC_FALLTHROUGH;
 			case '1': case '2': case '3': case '4':
 			case '5': case '6': case '7': case '8': case '9': {
@@ -474,7 +472,6 @@ malloc_vsnprintf(char *str, size_t size, const char *format, va_list ap) {
 				assert(uwidth != UINTMAX_MAX || get_errno() !=
 				    ERANGE);
 				width = (int)uwidth;
-				first_width_digit = false;
 				break;
 			} default:
 				break;

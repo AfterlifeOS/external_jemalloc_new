@@ -1,11 +1,12 @@
 #ifndef JEMALLOC_INTERNAL_EXTERNS_H
 #define JEMALLOC_INTERNAL_EXTERNS_H
 
+#include "jemalloc/internal/arena_types.h"
 #include "jemalloc/internal/atomic.h"
 #include "jemalloc/internal/hpa_opts.h"
+#include "jemalloc/internal/nstime.h"
 #include "jemalloc/internal/sec_opts.h"
 #include "jemalloc/internal/tsd_types.h"
-#include "jemalloc/internal/nstime.h"
 
 /* TSD checks this to set thread local slow state accordingly. */
 extern bool malloc_slow;
@@ -21,8 +22,9 @@ extern sec_opts_t opt_hpa_sec_opts;
 extern const char *opt_junk;
 #define opt_junk_alloc 0
 #define opt_junk_free 0
-extern void (*junk_free_callback)(void *ptr, size_t size);
-extern void (*junk_alloc_callback)(void *ptr, size_t size);
+extern void (*JET_MUTABLE junk_free_callback)(void *ptr, size_t size);
+extern void (*JET_MUTABLE junk_alloc_callback)(void *ptr, size_t size);
+extern void (*JET_MUTABLE invalid_conf_abort)(void);
 #define opt_utrace 0
 #define opt_xmalloc 0
 #define opt_experimental_infallible_new 0
@@ -34,13 +36,14 @@ extern unsigned opt_narenas;
   #define opt_zero_realloc_action zero_realloc_action_alloc
 #endif
 extern malloc_init_t malloc_init_state;
-extern const char *zero_realloc_mode_names[];
+extern const char *const zero_realloc_mode_names[];
 extern atomic_zu_t zero_realloc_count;
 #ifdef JEMALLOC_CACHE_OBLIVIOUS
   #define opt_cache_oblivious true
 #else
   #define opt_cache_oblivious false
 #endif
+#define opt_debug_double_free_max_scan 0
 
 /* Escape free-fastpath when ptr & mask == 0 (for sanitization purpose). */
 extern uintptr_t san_cache_bin_nonfast_mask;
@@ -81,7 +84,8 @@ size_t batch_alloc(void **ptrs, size_t num, size_t size, int flags);
 void jemalloc_prefork(void);
 void jemalloc_postfork_parent(void);
 void jemalloc_postfork_child(void);
-void je_sdallocx_noflags(void *ptr, size_t size);
+void sdallocx_default(void *ptr, size_t size, int flags);
+void free_default(void *ptr);
 void *malloc_default(size_t size);
 
 #endif /* JEMALLOC_INTERNAL_EXTERNS_H */

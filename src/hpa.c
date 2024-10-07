@@ -24,7 +24,7 @@ static void hpa_dalloc_batch(tsdn_t *tsdn, pai_t *self,
 static uint64_t hpa_time_until_deferred_work(tsdn_t *tsdn, pai_t *self);
 
 bool
-hpa_supported() {
+hpa_supported(void) {
 #ifdef _WIN32
 	/*
 	 * At least until the API and implementation is somewhat settled, we
@@ -68,11 +68,7 @@ hpa_central_init(hpa_central_t *central, base_t *base, const hpa_hooks_t *hooks)
 	if (err) {
 		return true;
 	}
-	err = malloc_mutex_init(&central->mtx, "hpa_central",
-	    WITNESS_RANK_HPA_CENTRAL, malloc_mutex_rank_exclusive);
-	if (err) {
-		return true;
-	}
+
 	central->base = base;
 	central->eden = NULL;
 	central->eden_len = 0;
@@ -87,7 +83,7 @@ hpa_alloc_ps(tsdn_t *tsdn, hpa_central_t *central) {
 	    CACHELINE);
 }
 
-hpdata_t *
+static hpdata_t *
 hpa_central_extract(tsdn_t *tsdn, hpa_central_t *central, size_t size,
     bool *oom) {
 	/* Don't yet support big allocations; these should get filtered out. */
@@ -707,10 +703,10 @@ hpa_alloc_batch_psset(tsdn_t *tsdn, hpa_shard_t *shard, size_t size,
 
 static hpa_shard_t *
 hpa_from_pai(pai_t *self) {
-	assert(self->alloc = &hpa_alloc);
-	assert(self->expand = &hpa_expand);
-	assert(self->shrink = &hpa_shrink);
-	assert(self->dalloc = &hpa_dalloc);
+	assert(self->alloc == &hpa_alloc);
+	assert(self->expand == &hpa_expand);
+	assert(self->shrink == &hpa_shrink);
+	assert(self->dalloc == &hpa_dalloc);
 	return (hpa_shard_t *)self;
 }
 

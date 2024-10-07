@@ -21,6 +21,13 @@
 #else
 #define PAGES_FD_TAG -1
 #endif
+#if defined(JEMALLOC_HAVE_PRCTL) && defined(JEMALLOC_PAGEID)
+#include <sys/prctl.h>
+#ifndef PR_SET_VMA
+#define PR_SET_VMA 0x53564d41
+#define PR_SET_VMA_ANON_NAME 0
+#endif
+#endif
 
 /******************************************************************************/
 /* Defines/includes needed for special android code. */
@@ -33,7 +40,7 @@
 /* Data. */
 
 /* Actual operating system page size, detected during bootstrap, <= PAGE. */
-static size_t	os_page;
+size_t	os_page;
 
 #ifndef _WIN32
 #  define PAGES_PROT_COMMIT (PROT_READ | PROT_WRITE)
@@ -44,6 +51,22 @@ static int	mmap_flags;
 
 /* Runtime support for lazy purge. Irrelevant when !pages_can_purge_lazy. */
 static bool pages_can_purge_lazy_runtime = true;
+
+#ifdef JEMALLOC_PAGEID
+static int os_page_id(void *addr, size_t size, const char *name)
+{
+#ifdef JEMALLOC_HAVE_PRCTL
+	/*
+	 * While parsing `/proc/<pid>/maps` file, the block could appear as
+	 * 7f4836000000-7f4836800000 rw-p 00000000 00:00 0 [anon:jemalloc_pg_overcommit]`
+	 */
+	return prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME, (uintptr_t)addr, size,
+	    (uintptr_t)name);
+#else
+	return 0;
+#endif
+}
+#endif
 
 /******************************************************************************/
 /*
@@ -79,6 +102,7 @@ os_pages_map(void *addr, size_t size, size_t alignment, bool *commit) {
 	 * of existing mappings, and we only want to create new mappings.
 	 */
 	{
+		int flags = mmap_flags;
 #ifdef __NetBSD__
 		/*
 		 * On NetBSD PAGE for a platform is defined to the
@@ -88,12 +112,12 @@ os_pages_map(void *addr, size_t size, size_t alignment, bool *commit) {
 		 */
 		if (alignment > os_page || PAGE > os_page) {
 			unsigned int a = ilog2(MAX(alignment, PAGE));
-			mmap_flags |= MAP_ALIGNED(a);
+			flags |= MAP_ALIGNED(a);
 		}
 #endif
 		int prot = *commit ? PAGES_PROT_COMMIT : PAGES_PROT_DECOMMIT;
 
-		ret = mmap(addr, size, prot, mmap_flags, PAGES_FD_TAG, 0);
+		ret = mmap(addr, size, prot, flags, PAGES_FD_TAG, 0);
 	}
 	assert(ret != NULL);
 
@@ -116,13 +140,18 @@ os_pages_map(void *addr, size_t size, size_t alignment, bool *commit) {
 #endif
 	assert(ret == NULL || (addr == NULL && ret != addr) || (addr != NULL &&
 	    ret == addr));
+#ifdef JEMALLOC_PAGEID
+	int n = os_page_id(ret, size,
+	    os_overcommits ? "jemalloc_pg_overcommit" : "jemalloc_pg");
+	assert(n == 0 || (n == -1 && get_errno() == EINVAL));
+#endif
 	return ret;
 }
 
 static void *
 os_pages_trim(void *addr, size_t alloc_size, size_t leadsize, size_t size,
     bool *commit) {
-	void *ret = (void *)((uintptr_t)addr + leadsize);
+	void *ret = (void *)((byte_t *)addr + leadsize);
 
 	assert(alloc_size >= leadsize + size);
 #ifdef _WIN32
@@ -142,7 +171,7 @@ os_pages_trim(void *addr, size_t alloc_size, size_t leadsize, size_t size,
 		os_pages_unmap(addr, leadsize);
 	}
 	if (trailsize != 0) {
-		os_pages_unmap((void *)((uintptr_t)ret + size), trailsize);
+		os_pages_unmap((void *)((byte_t *)ret + size), trailsize);
 	}
 	return ret;
 #endif

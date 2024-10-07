@@ -1,6 +1,12 @@
 #ifndef JEMALLOC_INTERNAL_PAGES_EXTERNS_H
 #define JEMALLOC_INTERNAL_PAGES_EXTERNS_H
 
+#include "jemalloc/internal/jemalloc_preamble.h"
+#include "jemalloc/internal/jemalloc_internal_types.h"
+
+/* Actual operating system page size, detected during bootstrap, <= PAGE. */
+extern size_t	os_page;
+
 /* Page size.  LG_PAGE is determined by the configure script. */
 #ifdef PAGE_MASK
 #  undef PAGE_MASK
@@ -9,7 +15,7 @@
 #define PAGE_MASK	((size_t)(PAGE - 1))
 /* Return the page base address for the page containing address a. */
 #define PAGE_ADDR2BASE(a)						\
-	((void *)((uintptr_t)(a) & ~PAGE_MASK))
+	ALIGNMENT_ADDR2BASE(a, PAGE)
 /* Return the smallest pagesize multiple that is >= s. */
 #define PAGE_CEILING(s)							\
 	(((s) + PAGE_MASK) & ~PAGE_MASK)
@@ -36,7 +42,7 @@
 
 /* Return the huge page base address for the huge page containing address a. */
 #define HUGEPAGE_ADDR2BASE(a)						\
-	((void *)((uintptr_t)(a) & ~HUGEPAGE_MASK))
+	ALIGNMENT_ADDR2BASE(a, HUGEPAGE)
 /* Return the smallest pagesize multiple that is >= s. */
 #define HUGEPAGE_CEILING(s)						\
 	(((s) + HUGEPAGE_MASK) & ~HUGEPAGE_MASK)

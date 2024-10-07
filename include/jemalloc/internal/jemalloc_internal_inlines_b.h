@@ -1,7 +1,10 @@
 #ifndef JEMALLOC_INTERNAL_INLINES_B_H
 #define JEMALLOC_INTERNAL_INLINES_B_H
 
+#include "jemalloc/internal/jemalloc_preamble.h"
+#include "jemalloc/internal/arena_inlines_a.h"
 #include "jemalloc/internal/extent.h"
+#include "jemalloc/internal/jemalloc_internal_inlines_a.h"
 
 static inline void
 percpu_arena_update(tsd_t *tsd, unsigned cpu) {
@@ -20,6 +23,7 @@ percpu_arena_update(tsd_t *tsd, unsigned cpu) {
 		tcache_t *tcache = tcache_get(tsd);
 		if (tcache != NULL) {
 			tcache_slow_t *tcache_slow = tsd_tcache_slowp_get(tsd);
+			assert(tcache_slow->arena != NULL);
 			tcache_arena_reassociate(tsd_tsdn(tsd), tcache_slow,
 			    tcache, newarena);
 		}

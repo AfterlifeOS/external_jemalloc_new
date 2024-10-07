@@ -1,6 +1,8 @@
 #ifndef JEMALLOC_INTERNAL_SPIN_H
 #define JEMALLOC_INTERNAL_SPIN_H
 
+#include "jemalloc/internal/jemalloc_preamble.h"
+
 #define SPIN_INITIALIZER {0U}
 
 typedef struct {
@@ -8,7 +10,7 @@ typedef struct {
 } spin_t;
 
 static inline void
-spin_cpu_spinwait() {
+spin_cpu_spinwait(void) {
 #  if HAVE_CPU_SPINWAIT
 	CPU_SPINWAIT;
 #  else

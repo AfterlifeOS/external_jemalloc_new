@@ -16,13 +16,13 @@ prof_recent_list_t prof_recent_alloc_list;
 malloc_mutex_t prof_recent_dump_mtx; /* Protects dumping. */
 
 static void
-prof_recent_alloc_max_init() {
+prof_recent_alloc_max_init(void) {
 	atomic_store_zd(&prof_recent_alloc_max, opt_prof_recent_alloc_max,
 	    ATOMIC_RELAXED);
 }
 
 static inline ssize_t
-prof_recent_alloc_max_get_no_lock() {
+prof_recent_alloc_max_get_no_lock(void) {
 	return atomic_load_zd(&prof_recent_alloc_max, ATOMIC_RELAXED);
 }
 
@@ -403,7 +403,7 @@ label_rollback:
 }
 
 ssize_t
-prof_recent_alloc_max_ctl_read() {
+prof_recent_alloc_max_ctl_read(void) {
 	cassert(config_prof);
 	/* Don't bother to acquire the lock. */
 	return prof_recent_alloc_max_get_no_lock();
@@ -495,9 +495,10 @@ prof_recent_alloc_dump_node(emitter_t *emitter, prof_recent_t *node) {
 	    &node->alloc_tctx->thr_uid);
 	prof_tdata_t *alloc_tdata = node->alloc_tctx->tdata;
 	assert(alloc_tdata != NULL);
-	if (alloc_tdata->thread_name != NULL) {
+	if (!prof_thread_name_empty(alloc_tdata)) {
+		const char *thread_name = alloc_tdata->thread_name;
 		emitter_json_kv(emitter, "alloc_thread_name",
-		    emitter_type_string, &alloc_tdata->thread_name);
+		    emitter_type_string, &thread_name);
 	}
 	uint64_t alloc_time_ns = nstime_ns(&node->alloc_time);
 	emitter_json_kv(emitter, "alloc_time", emitter_type_uint64,
@@ -511,9 +512,10 @@ prof_recent_alloc_dump_node(emitter_t *emitter, prof_recent_t *node) {
 		    emitter_type_uint64, &node->dalloc_tctx->thr_uid);
 		prof_tdata_t *dalloc_tdata = node->dalloc_tctx->tdata;
 		assert(dalloc_tdata != NULL);
-		if (dalloc_tdata->thread_name != NULL) {
+		if (!prof_thread_name_empty(dalloc_tdata)) {
+			const char *thread_name = dalloc_tdata->thread_name;
 			emitter_json_kv(emitter, "dalloc_thread_name",
-			    emitter_type_string, &dalloc_tdata->thread_name);
+			    emitter_type_string, &thread_name);
 		}
 		assert(!nstime_equals_zero(&node->dalloc_time));
 		uint64_t dalloc_time_ns = nstime_ns(&node->dalloc_time);
@@ -580,7 +582,7 @@ prof_recent_alloc_dump(tsd_t *tsd, write_cb_t *write_cb, void *cbopaque) {
 #undef PROF_RECENT_PRINT_BUFSIZE
 
 bool
-prof_recent_init() {
+prof_recent_init(void) {
 	cassert(config_prof);
 	prof_recent_alloc_max_init();
 

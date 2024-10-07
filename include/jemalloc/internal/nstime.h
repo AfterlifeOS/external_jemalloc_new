@@ -1,6 +1,9 @@
 #ifndef JEMALLOC_INTERNAL_NSTIME_H
 #define JEMALLOC_INTERNAL_NSTIME_H
 
+#include "jemalloc/internal/jemalloc_preamble.h"
+#include "jemalloc/internal/assert.h"
+
 /* Maximum supported number of seconds (~584 years). */
 #define NSTIME_SEC_MAX KQU(18446744072)
 
@@ -56,7 +59,7 @@ enum prof_time_res_e {
 typedef enum prof_time_res_e prof_time_res_t;
 
 extern prof_time_res_t opt_prof_time_res;
-extern const char *prof_time_res_mode_names[];
+extern const char *const prof_time_res_mode_names[];
 
 JEMALLOC_ALWAYS_INLINE void
 nstime_init_zero(nstime_t *time) {

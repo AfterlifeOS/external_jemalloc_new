@@ -1,6 +1,7 @@
 #ifndef JEMALLOC_INTERNAL_ARENA_STATS_H
 #define JEMALLOC_INTERNAL_ARENA_STATS_H
 
+#include "jemalloc/internal/jemalloc_preamble.h"
 #include "jemalloc/internal/atomic.h"
 #include "jemalloc/internal/lockedint.h"
 #include "jemalloc/internal/mutex.h"
@@ -51,6 +52,8 @@ struct arena_stats_s {
 	 * in pa_shard_stats_t.
 	 */
 	size_t			base; /* Derived. */
+	size_t			metadata_edata; /* Derived. */
+	size_t			metadata_rtree; /* Derived. */
 	size_t			resident; /* Derived. */
 	size_t			mapped; /* Derived. */
 

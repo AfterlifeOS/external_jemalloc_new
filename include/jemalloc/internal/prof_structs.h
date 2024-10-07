@@ -1,6 +1,7 @@
 #ifndef JEMALLOC_INTERNAL_PROF_STRUCTS_H
 #define JEMALLOC_INTERNAL_PROF_STRUCTS_H
 
+#include "jemalloc/internal/jemalloc_preamble.h"
 #include "jemalloc/internal/ckh.h"
 #include "jemalloc/internal/edata.h"
 #include "jemalloc/internal/mutex.h"
@@ -156,12 +157,6 @@ struct prof_tdata_s {
 	 */
 	uint64_t		thr_discrim;
 
-	/* Included in heap profile dumps if non-NULL. */
-	char			*thread_name;
-
-	bool			attached;
-	bool			expired;
-
 	rb_node(prof_tdata_t)	tdata_link;
 
 	/*
@@ -178,6 +173,9 @@ struct prof_tdata_s {
 	 * may write to prof_tctx_t contents when freeing associated objects.
 	 */
 	ckh_t			bt2tctx;
+
+	/* Included in heap profile dumps if has content. */
+	char			thread_name[PROF_THREAD_NAME_MAX_LEN];
 
 	/* State used to avoid dumping while operating on prof internals. */
 	bool			enq;
@@ -198,11 +196,14 @@ struct prof_tdata_s {
 	 */
 	bool			active;
 
+	bool			attached;
+	bool			expired;
+
 	/* Temporary storage for summation during dump. */
 	prof_cnt_t		cnt_summed;
 
 	/* Backtrace vector, used for calls to prof_backtrace(). */
-	void			*vec[PROF_BT_MAX];
+	void 			**vec;
 };
 typedef rb_tree(prof_tdata_t) prof_tdata_tree_t;
 

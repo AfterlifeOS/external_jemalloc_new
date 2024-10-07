@@ -1,6 +1,7 @@
 #ifndef JEMALLOC_INTERNAL_BASE_H
 #define JEMALLOC_INTERNAL_BASE_H
 
+#include "jemalloc/internal/jemalloc_preamble.h"
 #include "jemalloc/internal/edata.h"
 #include "jemalloc/internal/ehooks.h"
 #include "jemalloc/internal/mutex.h"
@@ -49,8 +50,13 @@ struct base_s {
 	/* Heap of extents that track unused trailing space within blocks. */
 	edata_heap_t avail[SC_NSIZES];
 
+	/* Contains reusable base edata (used by tcache_stacks currently). */
+	edata_avail_t edata_avail;
+
 	/* Stats, only maintained if config_stats. */
 	size_t allocated;
+	size_t edata_allocated;
+	size_t rtree_allocated;
 	size_t resident;
 	size_t mapped;
 };
@@ -70,8 +76,12 @@ extent_hooks_t *base_extent_hooks_set(base_t *base,
     extent_hooks_t *extent_hooks);
 void *base_alloc(tsdn_t *tsdn, base_t *base, size_t size, size_t alignment);
 edata_t *base_alloc_edata(tsdn_t *tsdn, base_t *base);
+void *base_alloc_rtree(tsdn_t *tsdn, base_t *base, size_t size);
+void *b0_alloc_tcache_stack(tsdn_t *tsdn, size_t size);
+void b0_dalloc_tcache_stack(tsdn_t *tsdn, void *tcache_stack);
 void base_stats_get(tsdn_t *tsdn, base_t *base, size_t *allocated,
-    size_t *resident, size_t *mapped);
+    size_t *edata_allocated, size_t *rtree_allocated, size_t *resident,
+    size_t *mapped);
 void base_prefork(tsdn_t *tsdn, base_t *base);
 void base_postfork_parent(tsdn_t *tsdn, base_t *base);
 void base_postfork_child(tsdn_t *tsdn, base_t *base);
