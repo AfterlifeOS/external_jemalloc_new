@@ -12,6 +12,8 @@
 /doc/jemalloc.html
 /doc/jemalloc.3
 
+/doc_internal/PROFILING_INTERNALS.pdf
+
 /jemalloc.pc
 
 /lib/
@@ -30,6 +32,7 @@
 /test/test.sh
 
 /test/integration/[A-Za-z]*
+!/test/integration/cpp/
 !/test/integration/[A-Za-z]*.*
 /test/integration/*.[od]
 /test/integration/*.out
@@ -50,6 +53,11 @@
 !/test/unit/[A-Za-z]*.*
 /test/unit/*.[od]
 /test/unit/*.out
+
+/test/analyze/[A-Za-z]*
+!/test/analyze/[A-Za-z]*.*
+/test/analyze/*.[od]
+/test/analyze/*.out
 
 /VERSION
 
